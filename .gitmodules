@@ -1,0 +1,6 @@
+[submodule "minipoker"]
+	path = lib/minipoker
+	url = https://github.com/reutsharabani/minipoker
+[submodule "mcts"]
+	path = lib/mcts
+	url = https://github.com/hildensia/mcts
