@@ -12,6 +12,11 @@ class Seat:
         self.bet += amount
         self.bet_count += 1
 
+    def clearBet():
+        self.bet = 0
+        self.bet_count = 0
+
+
 
 class Table:
 
@@ -48,12 +53,35 @@ class Table:
         self.current_seat = nextSeatIndex(self.current_seat)
 
 
-class Game:
+class GameState:
 
     def __init__ (self, table, big_blind = 1):
         self.stage = 1
         self.table = table
         self.big_blind = big_blind
+        self.actions = []
+
+
+    def perform(self, action):
+        if over():
+          return
+        seat = table.current_seat
+        pass
+
+    def reward(self, parent, action):
+        pass
+
+    def betAmount(self):
+        return self.big_blind if stage < 3 else self.big_blind * 2
+
+    def is_terminal(self):
+        pass
+
+    def __eq__(self):
+        pass
+
+    def __hash__(self):
+        pass
 
     def postBlinds(self): #todo - 2 players
         sb = table.nextSeatIndex(table.buttonSeat)
@@ -61,20 +89,3 @@ class Game:
         bb = table.nextSeatIndex(sb)
         bb.bet(big_blind)
 
-
-    def newGame(self):
-        table.moveButton()
-        self.postBlinds()
-
-
-    def nextMove(self):
-        if over():
-          return
-        seat = table.current_seat
-        pass
-
-    def over(self):
-        pass
-
-    def betAmount(self):
-        return self.big_blind if stage < 3 else self.big_blind * 2

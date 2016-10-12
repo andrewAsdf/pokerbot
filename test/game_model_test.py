@@ -1,7 +1,7 @@
 import pytest
 
-from game_model import Table
-from game_model import Seat
+from pokerbot.game_model import Table
+from pokerbot.game_model import Seat
 
 class TestTable():
 

@@ -5,7 +5,7 @@ from flask import Response
 import untangle
 import json
 
-import game_model
+import pokerbot.game_model
 
 app = Flask(__name__)
 
