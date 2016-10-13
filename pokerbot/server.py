@@ -24,7 +24,9 @@ def getObjectFromXmlData(data):
     return untangle.parse(data_str)
 
 
-table = game_model.Table()
+game = pokerbot.game_model.GameState()
+
+table = game.table
 
 our_seat = []
 
@@ -34,10 +36,10 @@ actions = []
 @app.route('/', methods=['GET'])
 
 def index():
-    tableText = json.dumps(table, default=vars, indent=2)
+    gameText = json.dumps(game, default=vars, indent=2)
     actionsText = json.dumps(actions, default=vars, indent=2)
 
-    return Response(tableText + actionsText, mimetype='text/plain')
+    return Response(gameText + actionsText, mimetype='text/plain')
 
 
 @app.route('/holecards', methods=['POST'])
@@ -72,7 +74,6 @@ def action():
 
 @app.route('/newgame', methods=['POST'])
 def newgame():
-
     xml = getObjectFromXmlData(request.data)
     seat_number = int(xml.newgame.buttonseat.cdata)
 
@@ -92,12 +93,26 @@ def newgame():
 
 @app.route('/showdown', methods=['POST'])
 def showdown_event():
-    return 'Showdown'
+    xml = getObjectFromXmlData(request.data)
+
+    for hand in xml.showdown.cards:
+        cards = [x.cdata for x in hand.card]
+
+        seatnumber = int(hand.seat.cdata)
+        table.seats[seatnumber].cards = cards
+
+    return Response()
 
 
 @app.route('/board', methods=['POST'])
 def stage_event():
-    return 'Board'
+    xml = getObjectFromXmlData(request.data)
+
+    game.stage = xml.board.stage.cdata
+
+    game.table.board = [x.cdata for x in xml.board.cards.card]
+
+    return Response()
 
 
 @app.route('/gameover', methods=['POST'])

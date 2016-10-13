@@ -6,13 +6,14 @@ class Seat:
         self.stack = stack
         self.bet  = 0
         self.bet_count = 0
+        self.hand = []
 
-    def bet(amount)
+    def bet(self, amount):
         self.stack -= amount
         self.bet += amount
         self.bet_count += 1
 
-    def clearBet():
+    def clearBet(self):
         self.bet = 0
         self.bet_count = 0
 
@@ -24,6 +25,7 @@ class Table:
         self.seats = [Seat() for _ in range(0,10)]
         self.current_seat = 0
         self.button_seat = 0
+        self.board = []
 
 
     def __getitem__(self, index):
@@ -34,15 +36,15 @@ class Table:
         self.seats[key] = value
 
 
-    def clear(self):
-        self = Table()
-
-
     def nextSeatIndex(self, seatIndex):
         nextIndex = (seatIndex + 1) % 10
         while self.seats[nextIndex].empty:
             nextIndex = (nextIndex + 1) % 10
         return nextIndex
+
+
+    def clear():
+        self = Table()
 
 
     def moveButton():
@@ -55,9 +57,9 @@ class Table:
 
 class GameState:
 
-    def __init__ (self, table, big_blind = 1):
+    def __init__ (self, big_blind = 1):
         self.stage = 1
-        self.table = table
+        self.table = Table()
         self.big_blind = big_blind
         self.actions = []
 
