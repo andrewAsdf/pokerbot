@@ -6,6 +6,7 @@ import untangle
 import json
 
 import pokerbot.game_model
+import pokerbot.database
 
 app = Flask(__name__)
 
@@ -24,11 +25,9 @@ def getObjectFromXmlData(data):
     return untangle.parse(data_str)
 
 
+db = pokerbot.database.Database()
+
 game = pokerbot.game_model.GameState()
-
-table = game.table
-
-our_seat = []
 
 actions = []
 
@@ -74,20 +73,19 @@ def action():
 
 @app.route('/newgame', methods=['POST'])
 def newgame():
-    xml = getObjectFromXmlData(request.data)
-    seat_number = int(xml.newgame.buttonseat.cdata)
-
-    table.clear()
+    game.table.clear()
     actions.clear()
+
+    xml = getObjectFromXmlData(request.data)
 
     for p in xml.newgame.players.player:
         seat = int(p.seat.cdata)
-        table[seat].name = p.name.cdata
-        table[seat].stack = float(p.stack.cdata)
-        table[seat].empty = False
+        game.table[seat].name = p.name.cdata
+        game.table[seat].stack = float(p.stack.cdata)
 
-    global our_seat
-    our_seat = table[seat_number]
+    seat_number = int(xml.newgame.buttonseat.cdata)
+    game.our_seat = game.table[seat_number]
+
     return Response()
 
 
@@ -99,13 +97,13 @@ def showdown_event():
         cards = [x.cdata for x in hand.card]
 
         seatnumber = int(hand.seat.cdata)
-        table.seats[seatnumber].cards = cards
+        game.table.seats[seatnumber].cards = cards
 
     return Response()
 
 
 @app.route('/board', methods=['POST'])
-def stage_event():
+def board():
     xml = getObjectFromXmlData(request.data)
 
     game.stage = xml.board.stage.cdata
@@ -116,8 +114,10 @@ def stage_event():
 
 
 @app.route('/gameover', methods=['POST'])
-def win_event():
-    return 'GameOver'
+def gameover():
+    seats = [vars(seat) for seat in game.table.seats if not seat.empty()]
+    db.add_game(seats, actions)
+    return Response()
 
 
 if __name__ == '__main__':

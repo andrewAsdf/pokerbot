@@ -2,7 +2,6 @@ class Seat:
 
     def __init__ (self, name = '', stack = 0):
         self.name = name
-        self.empty = True if name == '' else False
         self.stack = stack
         self.bet  = 0
         self.bet_count = 0
@@ -16,6 +15,9 @@ class Seat:
     def clearBet(self):
         self.bet = 0
         self.bet_count = 0
+
+    def empty(self):
+        return True if name != '' else False
 
 
 
@@ -43,7 +45,7 @@ class Table:
         return nextIndex
 
 
-    def clear():
+    def clear(self):
         self = Table()
 
 
@@ -62,6 +64,7 @@ class GameState:
         self.table = Table()
         self.big_blind = big_blind
         self.actions = []
+        self.out_seat = None
 
 
     def perform(self, action):
