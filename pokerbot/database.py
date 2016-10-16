@@ -7,10 +7,11 @@ class Database:
         self.db = self.client.poker
         self.games = self.db.games
 
-    def add_game(self, seats, actions):
+    def add_game(self, seats, actions, button_seat):
         game = {}
         game['actions'] = actions
         game['table'] = seats
+        game['button'] = button_seat
 
         self.games.insert_one(game)
 

@@ -17,7 +17,7 @@ class Seat:
         self.bet_count = 0
 
     def empty(self):
-        return True if name != '' else False
+        return True if self.name == '' else False
 
 
 

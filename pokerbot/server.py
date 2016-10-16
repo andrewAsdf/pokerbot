@@ -48,6 +48,10 @@ def hole_cards():
     cards = xml.holecards.cards.card #an array of 2 cards
     global current_cards
     current_cards = (cards[0].cdata, cards[1].cdata)
+
+    our_seat = int(xml.holecards.seat.cdata)
+    game.our_seat = our_seat
+
     return Response()
 
 
@@ -83,8 +87,7 @@ def newgame():
         game.table[seat].name = p.name.cdata
         game.table[seat].stack = float(p.stack.cdata)
 
-    seat_number = int(xml.newgame.buttonseat.cdata)
-    game.our_seat = game.table[seat_number]
+    game.table.button_seat = int(xml.newgame.buttonseat.cdata)
 
     return Response()
 
@@ -97,7 +100,7 @@ def showdown_event():
         cards = [x.cdata for x in hand.card]
 
         seatnumber = int(hand.seat.cdata)
-        game.table.seats[seatnumber].cards = cards
+        game.table.seats[seatnumber].hand = cards
 
     return Response()
 
@@ -115,8 +118,11 @@ def board():
 
 @app.route('/gameover', methods=['POST'])
 def gameover():
-    seats = [vars(seat) for seat in game.table.seats if not seat.empty()]
-    db.add_game(seats, actions)
+
+    seats = [{'name': seat.name, 'seat_number': i, 'hand': seat.hand} for i, seat\
+            in enumerate(game.table.seats) if not seat.empty()]
+
+    db.add_game(seats, actions, game.table.button_seat)
     return Response()
 
 
