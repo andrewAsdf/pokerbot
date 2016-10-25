@@ -13,5 +13,9 @@ class Database:
         game['table'] = seats
         game['button'] = button_seat
 
-        self.games.insert_one(game)
+        for seat in seats:
+            pass
+
+        object_id = self.games.insert_one(game).inserted_id
+        return object_id
 

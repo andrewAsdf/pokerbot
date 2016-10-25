@@ -29,16 +29,16 @@ db = pokerbot.database.Database()
 
 game = pokerbot.game_model.GameState()
 
-actions = []
+events = []
 
 
 @app.route('/', methods=['GET'])
 
 def index():
     gameText = json.dumps(game, default=vars, indent=2)
-    actionsText = json.dumps(actions, default=vars, indent=2)
+    eventsText = json.dumps(events, default=vars, indent=2)
 
-    return Response(gameText + actionsText, mimetype='text/plain')
+    return Response(gameText + eventsText, mimetype='text/plain')
 
 
 @app.route('/holecards', methods=['POST'])
@@ -71,14 +71,14 @@ def action():
         except IndexError:
             pass
 
-        actions.append(action)
+        events.append(action)
         return Response()
 
 
 @app.route('/newgame', methods=['POST'])
 def newgame():
     game.table.clear()
-    actions.clear()
+    events.clear()
 
     xml = getObjectFromXmlData(request.data)
 
@@ -109,9 +109,13 @@ def showdown_event():
 def board():
     xml = getObjectFromXmlData(request.data)
 
-    game.stage = xml.board.stage.cdata
+    stage = xml.board.stage.cdata
+    game.stage = stage
 
-    game.table.board = [x.cdata for x in xml.board.cards.card]
+    cards = [x.cdata for x in xml.board.cards.card]
+    game.table.board = cards
+
+    events.append({'type': 'board', 'stage': stage, 'cards': cards})
 
     return Response()
 
@@ -122,7 +126,8 @@ def gameover():
     seats = [{'name': seat.name, 'seat_number': i, 'hand': seat.hand} for i, seat\
             in enumerate(game.table.seats) if not seat.empty()]
 
-    db.add_game(seats, actions, game.table.button_seat)
+    last_id = db.add_game(seats, events, game.table.button_seat)
+
     return Response()
 
 
