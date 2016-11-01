@@ -1,34 +1,31 @@
 import enum
 
-class Action(enum.Enum):
-    Fold = 1
-    Call = 2
-    Raise = 3
-
 
 class Seat:
 
     def __init__ (self, name = '', chips = 0):
         self.name = name
         self.chips = chips
-        self.chips_bet  = 0
-        self.bet_count = 0
+        self.chips_bet = 0
         self.hand = []
-        self.active = False
+        self.active = True
 
-    def bet(self, amount):
+
+    def place_bet(self, amount):
         self.chips -= amount
         self.chips_bet += amount
-        self.bet_count += 1
+
 
     def reset(self):
         self.chips_bet = 0
-        self.bet_count = 0
         self.active = True if self.chips > 0 else False
+
 
     def fold(self):
         self.active = False
 
+
+    @property
     def empty(self):
         return True if self.name == '' else False
 
@@ -37,7 +34,7 @@ class Seat:
 class Table:
 
     def __init__ (self):
-        self.seats = [Seat() for _ in range(0,10)]
+        self.seats = [Seat()] * 10
         self.current_seat = 0
         self.button_seat = 0
         self.board = []
@@ -57,7 +54,8 @@ class Table:
 
         while neighbor > 0:
             nextIndex = (nextIndex + 1) % 10
-            if not self.seats[nextIndex].empty():
+            seat = self.seats[nextIndex]
+            if (not seat.empty) and seat.active:
                 neighbor -= 1
 
         return nextIndex
@@ -67,28 +65,18 @@ class Table:
         self = Table()
 
 
-    def newGame(self):
-        map(lambda x: x.reset(), seats)
-        moveButton()
-        
+    def new_game(self, start_from = 9):
+        map(lambda x: x.reset(), self.seats)
+
+        self.button_seat = self.nextSeatIndex(start_from)
+        self.current_seat = self.nextSeatIndex(self.button_seat, 3)
+
 
     def moveButton(self):
         self.button_seat = self.nextSeatIndex(self.button_seat)
 
-
     def nextPlayer(self):
         self.current_seat = self.nextSeatIndex(self.current_seat)
-
-
-    def getSmallBlindSeat(self):
-        return nextSeatIndex(self.button_seat, 1)
-
-    def getBigBlindSeat(self):
-        return nextSeatIndex(self.button_seat, 2)
-
-    def getFirstPlayerSeat(self):
-        return nextSeatIndex(self.button_seat, 3)
-
 
 
 class GameState:
@@ -96,24 +84,93 @@ class GameState:
     def __init__ (self, big_blind = 1):
         self.stage = 1
         self.table = Table()
-        self.big_blind = big_blind
         self.actions = []
-        self.out_seat = None
+        self.pot = 0
+        self.raise_count = 0
+        self.big_blind = big_blind
+        self.to_call = big_blind
 
 
-    def perform(self, action):
-        if over():
-          return
-        seat = table.current_seat
-        pass
+    def new_game(self):
+        self.table.new_game()
+        self.to_call = self.big_blind
+        self._postBlinds()
+
+
+    def fold(self, seat_index = None):
+        player = self.table[self.table.current_seat]
+        player.fold()
+        self.table.nextPlayer()
+
+        if self.stage_over():
+            self.next_stage()
+
+
+    def _player_call(self, player):
+        called = self.to_call - player.chips_bet
+        player.place_bet(called)
+        self.pot += called
+
+
+    def _player_bet(self, player, bet):
+        player.place_bet(bet)
+
+        self.to_call += bet
+        self.pot += bet
+        self.raise_count += 1
+
+
+    @property
+    def current_bet(self):
+        return self.big_blind if self.stage < 3 else self.big_blind * 2
+
+
+    def call(self, seat_index = None):
+        player = self.table[self.table.current_seat]
+
+        if player.chips_bet < self.to_call:
+            self._player_call(player)
+
+        self.table.nextPlayer()
+
+        if self.stage_over():
+            self.next_stage()
+
+
+    def bet(self, seat_index = None):
+        player = self.table[self.table.current_seat]
+
+        if player.chips_bet < self.to_call:
+            self._player_call(player)
+
+        self._player_bet(player, self.current_bet)
+
+        self.table.nextPlayer()
+
+
+    def _postBlinds(self): #TODO - for 2 players
+        button_seat = self.table.button_seat
+
+        sb_seat = self.table.nextSeatIndex(button_seat, 1)
+        bb_seat = self.table.nextSeatIndex(button_seat, 2)
+
+        self.table[sb_seat].place_bet(self.big_blind / 2)
+        self.table[bb_seat].place_bet(self.big_blind)
+
+        self.pot += self.big_blind * 1.5
+
+
+    def _next_stage(self):
+        self.stage += 1
+        self.to_call = 0
+
+
+    def stage_over(self):
+        return False
 
 
     def reward(self, parent, action):
         pass
-
-
-    def betAmount(self):
-        return self.big_blind if stage < 3 else self.big_blind * 2
 
 
     def is_terminal(self):
@@ -128,8 +185,3 @@ class GameState:
         pass
 
 
-    def postBlinds(self): #todo - 2 players
-        sb = table.nextSeatIndex(table.buttonSeat)
-        sb.bet(big_blind / 2)
-        bb = table.nextSeatIndex(sb)
-        bb.bet(big_blind)
