@@ -1,3 +1,5 @@
+import pytest
+
 from pokerbot.game_model import Table
 from pokerbot.game_model import Seat
 from pokerbot.game_model import GameState

@@ -1,5 +1,3 @@
-import enum
-
 
 class Seat:
 
@@ -49,6 +47,8 @@ class Table:
 
 
     def nextSeatIndex(self, seatIndex, neighbor = 1):
+        """Returns the next active seat index given a seat number. Doesn't
+        check whether there are active players at the table."""
 
         nextIndex = seatIndex
 

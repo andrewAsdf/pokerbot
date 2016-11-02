@@ -2,11 +2,13 @@ from flask import Flask
 from flask import request
 from flask import Response
 
+from pokerbot.controller import Controller
+from pokerbot.database import Database
+from pokerbot.game_model import GameState
+from pokerbot.game_model import Seat
+
 import untangle
 import json
-
-import pokerbot.game_model
-import pokerbot.database
 
 app = Flask(__name__)
 
@@ -25,18 +27,13 @@ def getObjectFromXmlData(data):
     return untangle.parse(data_str)
 
 
-db = pokerbot.database.Database()
-
-game = pokerbot.game_model.GameState()
-
-events = []
+controller = Controller(GameState(), Database())
 
 
 @app.route('/', methods=['GET'])
 
 def index():
-    gameText = json.dumps(game, default=vars, indent=2)
-    eventsText = json.dumps(events, default=vars, indent=2)
+    gameText = json.dumps([controller.game, controller.events], default=vars, indent=2)
 
     return Response(gameText + eventsText, mimetype='text/plain')
 
@@ -46,11 +43,9 @@ def hole_cards():
 
     xml = getObjectFromXmlData(request.data)
     cards = xml.holecards.cards.card #an array of 2 cards
-    global current_cards
-    current_cards = (cards[0].cdata, cards[1].cdata)
 
-    our_seat = int(xml.holecards.seat.cdata)
-    game.our_seat = our_seat
+    controller.bot_seat(int(xml.holecards.seat.cdata))
+    controller.bot_cards((cards[0].cdata, cards[1].cdata))
 
     return Response()
 
@@ -71,24 +66,23 @@ def action():
         except IndexError:
             pass
 
-        events.append(action)
+        controller.receive_event(action)
         return Response()
 
 
 @app.route('/newgame', methods=['POST'])
 def newgame():
-    game.table.clear()
-    events.clear()
 
     xml = getObjectFromXmlData(request.data)
 
+    players = [Seat()] * 10
+
     for p in xml.newgame.players.player:
         seat = int(p.seat.cdata)
-        game.table[seat].name = p.name.cdata
-        game.table[seat].stack = float(p.stack.cdata)
+        players[seat] = Seat(p.name.cdata, float(p.stack.cdata))
 
-    game.table.button_seat = int(xml.newgame.buttonseat.cdata)
-
+    button_seat = int(xml.newgame.buttonseat.cdata)
+    controller.new_game(players, button_seat)
     return Response()
 
 
@@ -98,9 +92,8 @@ def showdown_event():
 
     for hand in xml.showdown.cards:
         cards = [x.cdata for x in hand.card]
-
-        seatnumber = int(hand.seat.cdata)
-        game.table.seats[seatnumber].hand = cards
+        seat = int(hand.seat.cdata)
+        controller.show_cards(seat, cards)
 
     return Response()
 
@@ -110,24 +103,16 @@ def board():
     xml = getObjectFromXmlData(request.data)
 
     stage = xml.board.stage.cdata
-    game.stage = stage
-
     cards = [x.cdata for x in xml.board.cards.card]
-    game.table.board = cards
 
-    events.append({'type': 'board', 'stage': stage, 'cards': cards})
+    controller.receive_event({'type': 'board', 'stage': stage, 'cards': cards})
 
     return Response()
 
 
 @app.route('/gameover', methods=['POST'])
 def gameover():
-
-    seats = [{'name': seat.name, 'seat_number': i, 'hand': seat.hand} for i, seat\
-            in enumerate(game.table.seats) if not seat.empty()]
-
-    last_id = db.add_game(seats, events, game.table.button_seat)
-
+    controller.game_over()
     return Response()
 
 
