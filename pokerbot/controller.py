@@ -1,4 +1,7 @@
 
+stage_numbers = {'flop' : 1, 'turn' : 2, 'river' : 3}
+
+
 class Controller:
 
     def __init__(self, game, db):
@@ -7,13 +10,22 @@ class Controller:
         self.events = []
         self.seat = 0
         self.cards = tuple()
-        pass
 
 
     def receive_event(self, event):
         self.events.append(event)
-        #TODO: add board cards
-        pass
+        
+        type = event['type']
+
+        if type == 'board':
+            self.game.table.board = event['cards']
+            self.game.stage = stage_numbers[event['stage']]
+        elif type == 'bet' or type == 'raise':
+            self.game.bet()
+        elif type == 'call' or type == 'check':
+            self.game.call()
+        elif type == 'fold':
+            self.game.fold()
 
 
     def new_game(self, players, button_seat):

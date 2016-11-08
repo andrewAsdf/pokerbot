@@ -22,6 +22,10 @@ class TestSeat():
         assert self.seat.chips_bet == 0
         assert self.seat.active == True
 
+    def test_empty(self):
+        self.seat = Seat()
+        assert self.seat.empty
+
 
 class TestTable():
 
@@ -35,6 +39,8 @@ class TestTable():
     def test_constructor(self):
         assert self.table[1].name == 'Andy'
         assert self.table[1].chips == 40
+        assert self.table[1].active == True
+        assert self.table[1].empty == False
 
 
     def test_nextSeatIndex(self):
@@ -49,8 +55,8 @@ class TestTable():
         assert self.table.button_seat == 1
 
 
-    def test_newGame(self):
-        self.table.new_game()
+    def test_newRound(self):
+        self.table.new_round()
         button_seat = self.table.button_seat
 
         assert button_seat == 1
@@ -61,12 +67,16 @@ class TestTable():
         assert self.table.current_seat == 1
 
 
-    def test_newGameIndexed(self):
-        self.table.new_game(1)
+    def test_newRoundIndexed(self):
+        self.table.new_round(1)
 
         assert self.table.button_seat == 5
         assert self.table.current_seat == 5
 
+    def test_activePlayers(self):
+        l =  list(self.table.activePlayers())
+        assert len(l) == 3
+        assert l[2].name == 'Carly'
 
 class TestGameState:
 
@@ -118,3 +128,12 @@ class TestGameState:
         assert self.game.to_call == 2
         assert self.game.pot == 5
         assert self.game.table[1].chips_bet == 2
+
+    def test_fold(self):
+        self.game.fold()
+        self.game.call()
+        self.game.call()
+        
+        assert self.game.to_call == 1
+        assert self.game.pot == 2
+        assert self.game.table.current_seat == 5

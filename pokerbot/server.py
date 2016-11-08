@@ -33,9 +33,10 @@ controller = Controller(GameState(), Database())
 @app.route('/', methods=['GET'])
 
 def index():
-    gameText = json.dumps([controller.game, controller.events], default=vars, indent=2)
+    gameText = json.dumps([controller.game, controller.events, controller.seat,\
+               controller.cards], default=vars, indent=2)
 
-    return Response(gameText + eventsText, mimetype='text/plain')
+    return Response(gameText, mimetype='text/plain')
 
 
 @app.route('/holecards', methods=['POST'])
