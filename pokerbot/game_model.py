@@ -1,6 +1,4 @@
 
-MAX_RAISES = 3
-
 class Seat:
 
     def __init__ (self, name = '', chips = 0):
@@ -46,7 +44,7 @@ class Seat:
 class Table:
 
     def __init__ (self):
-        self.seats = [Seat()] * 10
+        self.seats = [Seat()] * 10 #table size
         self.current_seat = 0
         self.button_seat = 0
         self.board = []
@@ -74,25 +72,31 @@ class Table:
         return nextIndex
 
 
-    def clear(self):
-        self = Table()
-
-
-    def new_round(self, start_from = 9):
+    def new_round(self, start_from):
         map(lambda x: x.reset(), self.seats)
 
         self.button_seat = self.nextSeatIndex(start_from)
         self.current_seat = self.nextSeatIndex(self.button_seat, 3)
 
 
-    def activePlayers(self):
+    def _activePlayers(self):
         for player in self.seats:
             if player.active:
                 yield player
 
 
+    def activePlayersOrdered(self):
+        button_seat = self[self.button_seat]
+
+        players = list(self._activePlayers())
+        button_seat_index = players.index(button_seat)
+
+        return players[button_seat_index:] + players[:button_seat_index]
+
+
     def moveButton(self):
         self.button_seat = self.nextSeatIndex(self.button_seat)
+
 
     def nextPlayer(self):
         self.current_seat = self.nextSeatIndex(self.current_seat)
@@ -109,8 +113,8 @@ class GameState:
         self.to_call = big_blind
 
 
-    def new_game(self):
-        self.table.new_round()
+    def new_game(self, start_from = 9): #last seat index
+        self.table.new_round(start_from)
         self.pot = 0
         self.raise_count = 0
         self.to_call = self.big_blind
@@ -132,7 +136,7 @@ class GameState:
 
 
     @property
-    def current_bet(self):
+    def current_bet_size(self):
         return self.big_blind if self.stage < 3 else self.big_blind * 2
 
 
@@ -163,7 +167,7 @@ class GameState:
         if player.chips_bet < self.to_call:
             self._player_call(player)
 
-        self._player_bet(player, self.current_bet)
+        self._player_bet(player, self.current_bet_size)
 
         self.table.nextPlayer()
 
@@ -195,6 +199,10 @@ class GameState:
 
 
     def is_terminal(self):
+        pass
+
+
+    def is_big_blind(self):
         pass
 
 

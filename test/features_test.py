@@ -22,8 +22,40 @@ class TestFeatures:
         self.game.bet()
         self.game.bet()
 
-# Andy:   2$
-# Blaine: 3$
-# Carly:  1$ - has to call 2$
-
         assert features.pot_odds(self.game) == 2 / (2 + 6)
+
+        # Andy:   2$
+        # Blaine: 3$
+        # Carly:  1$ - has to call 2$
+
+
+    def test_position(self):
+        assert features.position(self.game) == 3/3
+
+        self.game.call()
+        assert features.position(self.game) == 2/3
+
+        self.game.call()
+        assert features.position(self.game) == 1/3
+
+
+    def test_position_with_moved_button(self):
+        self.game.new_game(4) #Blaine will be button
+
+        assert features.position(self.game) == 3/3
+
+
+    def test_bets_to_call(self):
+        self.game.bet()
+        self.game.bet()
+        
+        assert features.bets_to_call(self.game) == 2
+
+
+    def test_committed(self):
+        """Blinds should count as committed chips"""
+        assert features.committed(self.game) == False
+
+        self.game.call()
+
+        assert features.committed(self.game) == True

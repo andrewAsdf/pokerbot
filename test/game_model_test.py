@@ -56,7 +56,7 @@ class TestTable():
 
 
     def test_newRound(self):
-        self.table.new_round()
+        self.table.new_round(9) #last seat index
         button_seat = self.table.button_seat
 
         assert button_seat == 1
@@ -73,10 +73,24 @@ class TestTable():
         assert self.table.button_seat == 5
         assert self.table.current_seat == 5
 
+
     def test_activePlayers(self):
-        l =  list(self.table.activePlayers())
+        l = list(self.table._activePlayers())
         assert len(l) == 3
         assert l[2].name == 'Carly'
+
+
+    def test_activePlayersOrdered(self):
+        self.table.new_round(4) #Blaine is button
+
+        l = self.table.activePlayersOrdered()
+
+        assert len(l) == 3
+
+        assert l[0].name == 'Blaine'
+        assert l[1].name == 'Carly'
+        assert l[2].name == 'Andy'
+
 
 class TestGameState:
 

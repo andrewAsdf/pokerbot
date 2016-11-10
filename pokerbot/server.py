@@ -33,8 +33,12 @@ controller = Controller(GameState(), Database())
 @app.route('/', methods=['GET'])
 
 def index():
-    gameText = json.dumps([controller.game, controller.events, controller.seat,\
-               controller.cards], default=vars, indent=2)
+    game = controller.game
+
+    player_seats = [s for s in game.table.seats if not s.empty]
+    items = [player_seats, controller.events, {'pot': game.pot, 'to_call':game.to_call}]
+
+    gameText = json.dumps(items, default=vars, indent=2)
 
     return Response(gameText, mimetype='text/plain')
 
