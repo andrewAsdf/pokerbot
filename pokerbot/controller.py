@@ -24,7 +24,8 @@ class Controller:
         if type == 'board':
             self.game.table.board = event['cards']
             self.game._next_stage() #todo
-        elif type == 'bet' or type == 'raise':
+
+        if type == 'bet' or type == 'raise':
             self.game.bet()
         elif type == 'call' or type == 'check':
             self.game.call()
@@ -62,5 +63,5 @@ class Controller:
 
         self.db.add_game(seats, self.events, self.game.table.button_seat)
 
-        game.new_game()
+        self.game.new_game()
 

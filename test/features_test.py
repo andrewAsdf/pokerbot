@@ -59,3 +59,8 @@ class TestFeatures:
         self.game.call()
 
         assert features.committed(self.game) == True
+        
+
+    def test_get_features(self):
+        feature_map = features.get_features(self.game)
+        assert len(features.functions) == len(feature_map.keys())

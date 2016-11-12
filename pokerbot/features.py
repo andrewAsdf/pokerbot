@@ -1,5 +1,4 @@
 import deuces.card
-import deuces.hand
 import deuces.evaluator
 
 
@@ -46,3 +45,13 @@ def stage(game_state):
 def board_wetness(game_state):
     """TODO"""
     return 0
+
+
+functions = [raise_count, pot_odds, position, bets_to_call, committed, stage]
+
+
+def get_features(game_state):
+    return {f.__name__ : f(game_state) for f in functions}
+
+    
+
