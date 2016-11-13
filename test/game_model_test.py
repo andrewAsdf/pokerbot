@@ -56,7 +56,7 @@ class TestTable():
 
 
     def test_newRound(self):
-        self.table.new_round(9) #last seat index
+        self.table.new_round()
         button_seat = self.table.button_seat
 
         assert button_seat == 1
@@ -68,7 +68,7 @@ class TestTable():
 
 
     def test_newRoundIndexed(self):
-        self.table.new_round(1)
+        self.table.new_round(5)
 
         assert self.table.button_seat == 5
         assert self.table.current_seat == 5
@@ -81,7 +81,7 @@ class TestTable():
 
 
     def test_activePlayersOrdered(self):
-        self.table.new_round(4) #Blaine is button
+        self.table.new_round(5)
 
         l = self.table.activePlayersOrdered()
 

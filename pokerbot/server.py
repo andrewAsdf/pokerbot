@@ -1,3 +1,9 @@
+bot_config = {
+    'teach_interval' : 10,
+    'mongo_port': 27017
+}
+
+
 from flask import Flask
 from flask import request
 from flask import Response
@@ -5,21 +11,24 @@ from flask import Response
 from pokerbot.controller import Controller
 from pokerbot.database import Database
 from pokerbot.game_model import GameState
+from pokerbot.opponent_modeller import OpponentModeller
 from pokerbot.game_model import Seat
+import pokerbot.features
 
 import untangle
 import json
 
 app = Flask(__name__)
 
-action_string = '<?xml version="1.0" encoding="UTF-8"?>\
-                <action>\
-                    <type>{}</type>\
-                    <amount>{}</amount>\
-                </action>'
+action_string_template = '''<?xml version="1.0" encoding="UTF-8"?>
+                                <action>
+                                    <type>{}</type>
+                                <amount>{}</amount>
+                            </action>'''
 
-def getActionXml(action_type, amount=0):
-    return action_string.format(action_type, amount)
+
+def getActionXml(action_type, amount=1):
+    return action_string_template.format(action_type, amount)
 
 
 def getObjectFromXmlData(data):
@@ -27,7 +36,11 @@ def getObjectFromXmlData(data):
     return untangle.parse(data_str)
 
 
-controller = Controller(GameState(), Database())
+db = Database(bot_config['mongo_port'])
+features = pokerbot.features.functions
+
+opponent_modeller = OpponentModeller(db, features, bot_config['teach_interval'])
+controller = Controller(GameState(), db, opponent_modeller)
 
 
 @app.route('/', methods=['GET'])
@@ -36,7 +49,18 @@ def index():
     game = controller.game
 
     player_seats = [s for s in game.table.seats if not s.empty]
-    items = [player_seats, controller.events, {'pot': game.pot, 'to_call':game.to_call}]
+
+    if (controller.playing):
+        features = pokerbot.features.get_features(game)
+    else:
+        features = None
+
+    items = [
+            player_seats,
+            controller.events,
+            {'pot': game.pot, 'to_call':game.to_call},
+            features
+    ]
 
     gameText = json.dumps(items, default=vars, indent=2)
 
@@ -59,7 +83,7 @@ def hole_cards():
 def action():
 
     if request.method == 'GET':
-        xml = getActionXml ('raise', 10)
+        xml = getActionXml ('call', 10)
         return Response(xml, mimetype='text/xml');
     else:
         xml = getObjectFromXmlData(request.data)
@@ -117,7 +141,15 @@ def board():
 
 @app.route('/gameover', methods=['POST'])
 def gameover():
-    controller.game_over()
+    xml = getObjectFromXmlData(request.data)
+
+    winning = xml.gameover.winning
+
+    gameover_event = {}
+    gameover_event['type'] = 'gameover'
+    gameover_event['wins'] = {w.seat.cdata : w.amount.cdata for w in winning}
+
+    controller.receive_event(gameover_event)
     return Response()
 
 

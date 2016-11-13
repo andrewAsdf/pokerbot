@@ -40,7 +40,7 @@ class TestFeatures:
 
 
     def test_position_with_moved_button(self):
-        self.game.new_game(4) #Blaine will be button
+        self.game.new_game(5)
 
         assert features.position(self.game) == 3/3
 
@@ -48,7 +48,7 @@ class TestFeatures:
     def test_bets_to_call(self):
         self.game.bet()
         self.game.bet()
-        
+
         assert features.bets_to_call(self.game) == 2
 
 
@@ -59,7 +59,7 @@ class TestFeatures:
         self.game.call()
 
         assert features.committed(self.game) == True
-        
+
 
     def test_get_features(self):
         feature_map = features.get_features(self.game)

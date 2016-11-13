@@ -38,6 +38,11 @@ def committed(game_state):
     return game_state.table[current_seat].chips_bet > 0
 
 
+def active_player_number(game_state):
+    return len(list(game_state.table.activePlayersOrdered()))
+    
+
+
 def stage(game_state):
     return game_state.stage / 3
 
@@ -47,11 +52,9 @@ def board_wetness(game_state):
     return 0
 
 
-functions = [raise_count, pot_odds, position, bets_to_call, committed, stage]
+functions = [raise_count, pot_odds, position, bets_to_call, committed,
+             active_player_number, stage]
 
 
 def get_features(game_state):
     return {f.__name__ : f(game_state) for f in functions}
-
-    
-

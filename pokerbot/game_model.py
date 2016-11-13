@@ -72,10 +72,16 @@ class Table:
         return nextIndex
 
 
-    def new_round(self, start_from):
+    def new_round(self, start_from = None):
         map(lambda x: x.reset(), self.seats)
 
-        self.button_seat = self.nextSeatIndex(start_from)
+        if start_from == None:
+            self.button_seat = self.nextSeatIndex(0)
+        elif not self[start_from].empty:
+            self.button_seat = start_from
+        else:
+            raise RuntimeError('Invalid starting seat!')
+
         self.current_seat = self.nextSeatIndex(self.button_seat, 3)
 
 
@@ -113,7 +119,7 @@ class GameState:
         self.to_call = big_blind
 
 
-    def new_game(self, start_from = 9): #last seat index
+    def new_game(self, start_from = None): #last seat index
         self.table.new_round(start_from)
         self.pot = 0
         self.raise_count = 0
