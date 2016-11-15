@@ -4,149 +4,149 @@ import pokerbot.features as features
 
 test_game = {
         "_id" : 999,
-	"actions" : [
-		{
-			"seat" : "3",
-			"amount" : "0.5",
-			"type" : "smallBlind"
-		},
-		{
-			"seat" : "4",
-			"amount" : "1.0",
-			"type" : "bigBlind"
-		},
-		{
-			"seat" : "5",
-			"type" : "call"
-		},
-		{
-			"seat" : "1",
-			"type" : "call"
-		},
-		{
-			"seat" : "2",
-			"type" : "fold"
-		},
-		{
-			"seat" : "3",
-			"type" : "call"
-		},
-		{
-			"seat" : "4",
-			"type" : "check"
-		},
-		{
-			"stage" : "flop",
-			"cards" : [
-				"5s",
-				"7c",
-				"Kh"
-			],
-			"type" : "board"
-		},
-		{
-			"seat" : "3",
-			"type" : "check"
-		},
-		{
-			"seat" : "4",
-			"type" : "check"
-		},
-		{
-			"seat" : "5",
-			"type" : "check"
-		},
-		{
-			"seat" : "1",
-			"type" : "check"
-		},
-		{
-			"stage" : "turn",
-			"cards" : [
-				"5s",
-				"7c",
-				"Kh",
-				"Ac"
-			],
-			"type" : "board"
-		},
-		{
-			"seat" : "3",
-			"amount" : "2.0",
-			"type" : "bet"
-		},
-		{
-			"seat" : "4",
-			"type" : "fold"
-		},
-		{
-			"seat" : "5",
-			"type" : "call"
-		},
-		{
-			"seat" : "1",
-			"type" : "fold"
-		},
-		{
-			"stage" : "river",
-			"cards" : [
-				"5s",
-				"7c",
-				"Kh",
-				"Ac",
-				"3s"
-			],
-			"type" : "board"
-		},
-		{
-			"seat" : "3",
-			"amount" : "2.0",
-			"type" : "bet"
-		},
-		{
-			"seat" : "5",
-			"type" : "call"
-		},
-		{
-			"wins" : {
-				"3" : "12.0"
-			},
-			"type" : "gameover"
-		}
-	],
-	"table" : [
-		{
-			"name" : "Jagbot",
-			"hand" : [ ],
-			"seat_number" : 1,
-			"stack" : 100
-		},
-		{
-			"name" : "Jagger",
-			"hand" : [ ],
-			"seat_number" : 2,
-			"stack" : 100
-		},
-		{
-			"name" : "Lionel",
-			"hand" : [ ],
-			"seat_number" : 3,
-			"stack" : 100
-		},
-		{
-			"name" : "Malory",
-			"hand" : [ ],
-			"seat_number" : 4,
-			"stack" : 100
-		},
-		{
-			"name" : "MyBot",
-			"hand" : [ ],
-			"seat_number" : 5,
-			"stack" : 100
-		}
-	],
-	"button" : 2
+        "actions" : [
+                {
+                        "seat" : "3",
+                        "amount" : "0.5",
+                        "type" : "smallBlind"
+                },
+                {
+                        "seat" : "4",
+                        "amount" : "1.0",
+                        "type" : "bigBlind"
+                },
+                {
+                        "seat" : "5",
+                        "type" : "call"
+                },
+                {
+                        "seat" : "1",
+                        "type" : "call"
+                },
+                {
+                        "seat" : "2",
+                        "type" : "fold"
+                },
+                {
+                        "seat" : "3",
+                        "type" : "call"
+                },
+                {
+                        "seat" : "4",
+                        "type" : "check"
+                },
+                {
+                        "stage" : "flop",
+                        "cards" : [
+                                "5s",
+                                "7c",
+                                "Kh"
+                        ],
+                        "type" : "board"
+                },
+                {
+                        "seat" : "3",
+                        "type" : "check"
+                },
+                {
+                        "seat" : "4",
+                        "type" : "check"
+                },
+                {
+                        "seat" : "5",
+                        "type" : "check"
+                },
+                {
+                        "seat" : "1",
+                        "type" : "check"
+                },
+                {
+                        "stage" : "turn",
+                        "cards" : [
+                                "5s",
+                                "7c",
+                                "Kh",
+                                "Ac"
+                        ],
+                        "type" : "board"
+                },
+                {
+                        "seat" : "3",
+                        "amount" : "2.0",
+                        "type" : "bet"
+                },
+                {
+                        "seat" : "4",
+                        "type" : "fold"
+                },
+                {
+                        "seat" : "5",
+                        "type" : "call"
+                },
+                {
+                        "seat" : "1",
+                        "type" : "fold"
+                },
+                {
+                        "stage" : "river",
+                        "cards" : [
+                                "5s",
+                                "7c",
+                                "Kh",
+                                "Ac",
+                                "3s"
+                        ],
+                        "type" : "board"
+                },
+                {
+                        "seat" : "3",
+                        "amount" : "2.0",
+                        "type" : "bet"
+                },
+                {
+                        "seat" : "5",
+                        "type" : "call"
+                },
+                {
+                        "wins" : {
+                                "3" : "12.0"
+                        },
+                        "type" : "gameover"
+                }
+        ],
+        "table" : [
+                {
+                        "name" : "Jagbot",
+                        "hand" : [ ],
+                        "seat_number" : 1,
+                        "stack" : 100
+                },
+                {
+                        "name" : "Jagger",
+                        "hand" : [ ],
+                        "seat_number" : 2,
+                        "stack" : 100
+                },
+                {
+                        "name" : "Lionel",
+                        "hand" : [ ],
+                        "seat_number" : 3,
+                        "stack" : 100
+                },
+                {
+                        "name" : "Malory",
+                        "hand" : [ ],
+                        "seat_number" : 4,
+                        "stack" : 100
+                },
+                {
+                        "name" : "MyBot",
+                        "hand" : [ ],
+                        "seat_number" : 5,
+                        "stack" : 100
+                }
+        ],
+        "button" : 2
 }
 
 class MockDB:
@@ -186,7 +186,7 @@ class TestOpponentModeller:
         table_data = test_game['table']
         game = self.opp_mod.create_game_state(table_data, button)
 
-        assert len(game.table.activePlayersOrdered()) == 5
+        assert len(game.table.active_players_ordered()) == 5
         assert game.table[1].name == 'Jagbot'
         assert game.table[5].name == 'MyBot'
 
@@ -210,9 +210,9 @@ class TestOpponentModeller:
 
         assert game.table[1].chips == 99 #fold
         assert game.table[2].chips == 100 #fold
-        assert game.table[3].chips == 97
+        assert game.table[3].chips == 95
         assert game.table[4].chips == 99 #fold
-        assert game.table[5].chips == 97
+        assert game.table[5].chips == 95
 
     def test_game_added(self):
         self.opp_mod.game_added()

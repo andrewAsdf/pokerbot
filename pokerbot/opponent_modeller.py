@@ -34,7 +34,7 @@ class OpponentModeller:
     def process_games(self):
         games = list(self.db.get_games(self.last_processed_game))
 
-        map(self.replay_game, games)
+        [self.replay_game(g) for g in games]
 
         last_id = games[-1]['_id']
         self.last_processed_game = last_id

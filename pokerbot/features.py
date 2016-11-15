@@ -3,44 +3,44 @@ import deuces.evaluator
 
 
 def raise_count(game_state):
-    return game_state.raise_count
+    if (game_state.stage == 0):
+        return (game_state.to_call / game_state.current_bet_size) - 1
+    else:
+        return game_state.to_call / game_state.current_bet_size
 
 
 def pot_odds(game_state):
-    seat_index = game_state.table.current_seat
-    called_chips = game_state.to_call - game_state.table[seat_index].chips_bet
+    table = game_state.table
+
+    called_chips = game_state.to_call - table.current_seat.chips_bet
 
     return called_chips / (game_state.pot + called_chips)
 
 
 def position(game_state):
-    active_players = list(game_state.table.activePlayersOrdered())
+    table = game_state.table
 
-    current_seat = game_state.table.current_seat
-    current_player = game_state.table[current_seat]
+    active_players = list(table.active_players_ordered())
 
-    player_number = active_players.index(current_player)
+    player_number = active_players.index(table.current_seat)
     players_count = len(active_players)
 
     return (players_count - player_number) / players_count
 
 
 def bets_to_call(game_state):
-    current_seat = game_state.table.current_seat
+    table = game_state.table
     betsize = game_state.current_bet_size
 
-    return (game_state.to_call - game_state.table[current_seat].chips_bet) / betsize
-
+    return (game_state.to_call - table.current_seat.chips_bet) / betsize
 
 
 def committed(game_state):
-    current_seat = game_state.table.current_seat
-    return game_state.table[current_seat].chips_bet > 0
+    return game_state.table.current_seat.chips_bet > 0
 
 
 def active_player_number(game_state):
-    return len(list(game_state.table.activePlayersOrdered()))
-    
+    return len(list(game_state.table.active_players_ordered()))
 
 
 def stage(game_state):

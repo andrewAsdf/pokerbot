@@ -1,4 +1,5 @@
 
+
 class Seat:
 
     def __init__ (self, name = '', chips = 0):
@@ -6,8 +7,7 @@ class Seat:
         self.hand = []
         self.name = name
         self.chips = chips
-        self._active = False
-        self.reset()
+        self._folded = False
 
 
     def place_bet(self, amount):
@@ -15,29 +15,27 @@ class Seat:
         self.chips_bet += amount
 
 
-    def reset(self):
-        bet = self.chips_bet
+    def clear_bets(self):
         self.chips_bet = 0
-
-        if not self.empty and self.chips > 0:
-            self._active = True
-        else:
-            self._active = False
-
-        return bet
 
 
     def fold(self):
-        self._active = False
+        self._folded = True
+
+
+    def new_game(self):
+        self._folded = False
+        self.chips_bet = 0
 
 
     @property
     def empty(self):
         return self.name == ''
 
+
     @property
     def active(self):
-        return not self.empty and self._active
+        return not self.empty and not self._folded
 
 
 
@@ -45,8 +43,8 @@ class Table:
 
     def __init__ (self):
         self.seats = [Seat()] * 10 #table size
-        self.current_seat = 0
-        self.button_seat = 0
+        self.current_index = 0
+        self.button_index = 0
         self.board = []
 
 
@@ -58,133 +56,154 @@ class Table:
         self.seats[key] = value
 
 
-    def nextSeatIndex(self, seatIndex, neighbor = 1):
+    def next_index(self, seat_index, neighbor = 1):
         """Returns the next active seat index given a seat number. Doesn't
         check whether there are active players at the table."""
 
-        nextIndex = seatIndex
+        next_index = seat_index
 
         while neighbor > 0:
-            nextIndex = (nextIndex + 1) % 10
-            seat = self.seats[nextIndex]
+            next_index = (next_index + 1) % 10
+            seat = self.seats[next_index]
             if (not seat.empty) and seat.active:
                 neighbor -= 1
-        return nextIndex
+        return next_index
 
 
-    def new_round(self, start_from = None):
-        map(lambda x: x.reset(), self.seats)
+    def new_game(self, start_from):
+        [s.new_game() for s in self.seats]
 
         if start_from == None:
-            self.button_seat = self.nextSeatIndex(0)
+            self.button_index = self.next_index(0)
         elif not self[start_from].empty:
-            self.button_seat = start_from
+            self.button_index = start_from
         else:
             raise RuntimeError('Invalid starting seat!')
 
-        self.current_seat = self.nextSeatIndex(self.button_seat, 3)
+        self.current_index = self.next_index(self.button_index, 3)
 
 
-    def activePlayersOrdered(self):
-        players = self[self.button_seat:] + self[:self.button_seat]
+    def next_stage(self):
+        self.current_index = self.next_index(self.button_index, 3)
 
+
+
+    def active_players_ordered(self):
+        players = self[self.button_index:] + self[:self.button_index]
         return [p for p in players if p.active]
 
 
-    def moveButton(self):
-        self.button_seat = self.nextSeatIndex(self.button_seat)
+    def move_button(self):
+        self.button_index = self.next_index(self.button_index)
 
 
-    def nextPlayer(self):
-        self.current_seat = self.nextSeatIndex(self.current_seat)
+    def next_seat(self):
+        self.current_index = self.next_index(self.current_index)
+
+
+    @property
+    def current_seat(self):
+        return self[self.current_index]
+
+
+    @property
+    def small_blind_seat(self):
+        return self[self.next_index(self.button_index, 1)]
+
+
+    @property
+    def big_blind_seat(self):
+        return self[self.next_index(self.button_index, 2)]
 
 
 class GameState:
 
     def __init__ (self, big_blind = 1):
         self.stage = 0
-        self.pot = 0
-        self.raise_count = 0
+        self._pot_previous_rounds = 0
+        self.to_call = big_blind
         self.table = Table()
         self.big_blind = big_blind
-        self.to_call = big_blind
-
-
-    def new_game(self, start_from = None): #last seat index
-        self.table.new_round(start_from)
-        self.pot = 0
-        self.raise_count = 0
-        self.to_call = self.big_blind
-        self._postBlinds()
-
-
-    def _player_call(self, player):
-        called = self.to_call - player.chips_bet
-        player.place_bet(called)
-        self.pot += called
-
-
-    def _player_bet(self, player, bet):
-        player.place_bet(bet)
-
-        self.to_call += bet
-        self.pot += bet
-        self.raise_count += 1
 
 
     @property
-    def current_bet_size(self):
-        return self.big_blind if self.stage < 3 else self.big_blind * 2
+    def current_bet_size(self): #preflop & flop: 1xBB, turn & river: 2xBB
+        return self.big_blind if self.stage < 2 else self.big_blind * 2
+
+
+    @property
+    def pot(self):
+        return self._pot_previous_rounds + self._current_round_pot
+
+
+    @property
+    def _current_round_pot(self):
+        return sum([s.chips_bet for s in self.table.seats])
+
+
+    def new_game(self, start_from = None):
+        self.table.new_game(start_from)
+        self.to_call = self.big_blind
+        self._pot_previous_rounds = 0
+        self._postBlinds()
 
 
     def fold(self):
-        player = self.table[self.table.current_seat]
+        player = self.table.current_seat
         player.fold()
-        self.table.nextPlayer()
+        self.table.next_seat()
 
         if self.stage_over():
             self.next_stage()
 
 
     def call(self):
-        player = self.table[self.table.current_seat]
+        player = self.table.current_seat
 
         if player.chips_bet < self.to_call:
-            self._player_call(player)
+            self._call(player)
 
-        self.table.nextPlayer()
+        self.table.next_seat()
 
         if self.stage_over():
             self.next_stage()
 
 
     def bet(self):
-        player = self.table[self.table.current_seat]
+        player = self.table.current_seat
 
         if player.chips_bet < self.to_call:
-            self._player_call(player)
+            self._call(player)
 
-        self._player_bet(player, self.current_bet_size)
+        self._bet(player, self.current_bet_size)
 
-        self.table.nextPlayer()
-
-
-    def _postBlinds(self): #TODO - for 2 players
-        button_seat = self.table.button_seat
-
-        sb_seat = self.table.nextSeatIndex(button_seat, 1)
-        bb_seat = self.table.nextSeatIndex(button_seat, 2)
-
-        self.table[sb_seat].place_bet(self.big_blind / 2)
-        self.table[bb_seat].place_bet(self.big_blind)
-
-        self.pot += self.big_blind * 1.5
+        self.table.next_seat()
 
 
     def _next_stage(self):
         self.stage += 1
         self.to_call = 0
-        self.table.new_round(self.table.button_seat)
+
+        self._pot_previous_rounds += self._current_round_pot
+        [s.clear_bets() for s in self.table.seats]
+
+        self.table.next_stage()
+
+
+    def _call(self, player):
+        called = self.to_call - player.chips_bet
+        player.place_bet(called)
+
+
+    def _bet(self, player, bet):
+        player.place_bet(bet)
+        self.to_call += bet
+
+
+    def _postBlinds(self): #TODO - for 2 players
+        self.table.small_blind_seat.place_bet(self.big_blind / 2)
+        self.table.big_blind_seat.place_bet(self.big_blind)
+        self.to_call = self.big_blind
 
 
     def stage_over(self):
