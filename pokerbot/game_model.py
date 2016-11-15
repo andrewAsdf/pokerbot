@@ -85,19 +85,10 @@ class Table:
         self.current_seat = self.nextSeatIndex(self.button_seat, 3)
 
 
-    def _activePlayers(self):
-        for player in self.seats:
-            if player.active:
-                yield player
-
-
     def activePlayersOrdered(self):
-        button_seat = self[self.button_seat]
+        players = self[self.button_seat:] + self[:self.button_seat]
 
-        players = list(self._activePlayers())
-        button_seat_index = players.index(button_seat)
-
-        return players[button_seat_index:] + players[:button_seat_index]
+        return [p for p in players if p.active]
 
 
     def moveButton(self):

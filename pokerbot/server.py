@@ -39,7 +39,8 @@ def getObjectFromXmlData(data):
 db = Database(bot_config['mongo_port'])
 features = pokerbot.features.functions
 
-opponent_modeller = OpponentModeller(db, features, bot_config['teach_interval'])
+
+opponent_modeller = OpponentModeller(features, db, bot_config['teach_interval'], "")
 controller = Controller(GameState(), db, opponent_modeller)
 
 

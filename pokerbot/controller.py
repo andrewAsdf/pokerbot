@@ -47,11 +47,10 @@ class Controller:
         self.playing = True
         self.events = []
         self.game.table.seats = players
-        self.game.table.button_seat = button_seat
 
         self.seats_initial = deepcopy(players) #for storing in db
 
-        self.game.new_game()
+        self.game.new_game(button_seat)
 
 
     def bot_cards(self, cards):
@@ -82,7 +81,6 @@ class Controller:
 
         self.db.add_game(seats, self.events, self.game.table.button_seat)
 
-        self.opponentmodeller.game_added()
+        #self.opponentmodeller.game_added()
 
         self.game.new_game()
-

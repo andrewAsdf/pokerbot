@@ -74,12 +74,6 @@ class TestTable():
         assert self.table.current_seat == 5
 
 
-    def test_activePlayers(self):
-        l = list(self.table._activePlayers())
-        assert len(l) == 3
-        assert l[2].name == 'Carly'
-
-
     def test_activePlayersOrdered(self):
         self.table.new_round(5)
 
@@ -90,6 +84,18 @@ class TestTable():
         assert l[0].name == 'Blaine'
         assert l[1].name == 'Carly'
         assert l[2].name == 'Andy'
+
+
+    def test_activePlayersOrderedFoldedButton(self):
+        self.table.new_round(5)
+        self.table[5].fold()
+
+        l = self.table.activePlayersOrdered()
+
+        assert len(l) == 2
+
+        assert l[0].name == 'Carly'
+        assert l[1].name == 'Andy'
 
 
 class TestGameState:
@@ -147,7 +153,7 @@ class TestGameState:
         self.game.fold()
         self.game.call()
         self.game.call()
-        
+
         assert self.game.to_call == 1
         assert self.game.pot == 2
         assert self.game.table.current_seat == 5
