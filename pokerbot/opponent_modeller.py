@@ -2,6 +2,7 @@ from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
 from pokerbot.controller import Controller
 
+import logging
 
 class _ReplayController(Controller):
     '''Controller class for replaying games'''
@@ -11,6 +12,8 @@ class _ReplayController(Controller):
 
     def game_over(self):
         pass
+
+logger = logging.getLogger('pokerbot.opponent_modeller')
 
 
 class OpponentModeller:
@@ -26,13 +29,14 @@ class OpponentModeller:
 
     def game_added(self):
         self.unprocessed_game_count += 1
+        logger.debug('unprocessed: {} games'.format(self.unprocessed_game_count))
 
         if self.unprocessed_game_count / self.teach_interval >= 1:
             self.process_games()
 
 
     def process_games(self):
-        games = list(self.db.get_games(self.last_processed_game))
+        games = list(self.db.get_games())
 
         [self.replay_game(g) for g in games]
 
@@ -45,11 +49,16 @@ class OpponentModeller:
         game_state = self.create_game_state(game_data['table'], game_data['button'])
         controller = _ReplayController(game_state)
 
+        logger.debug('game: {}'.format(game_data['_id']))
+
         for action in game_data['actions']:
 
             if self._is_player_action(action['type']):
                 feature_vec = [f(game_state) for f in self.features]
+                logger.debug('features: {}'.format(feature_vec))
+
                 action_int = self._action_to_int(action['type'])
+                logger.debug('action: {}'.format(action['type']))
 
                 self.observation_processor.new_observation(feature_vec, action_int)
 
@@ -83,3 +92,13 @@ class OpponentModeller:
                  'call' :   0,
                  'bet'  :   1,
                  'raise':   1 }[action_string]
+
+
+    def get_prediction(self):
+        pass
+
+
+class ObservationProcessor:
+    
+    def new_observation(self, feature_vec, action):
+        pass

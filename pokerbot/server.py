@@ -3,22 +3,51 @@ bot_config = {
     'mongo_port': 27017
 }
 
-
-from flask import Flask
-from flask import request
-from flask import Response
-
 from pokerbot.controller import Controller
 from pokerbot.database import Database
 from pokerbot.game_model import GameState
 from pokerbot.opponent_modeller import OpponentModeller
+from pokerbot.opponent_modeller import ObservationProcessor
 from pokerbot.game_model import Seat
 import pokerbot.features
 
+import logging
 import untangle
 import json
+from flask import Flask
+from flask import request
+from flask import Response
+
+
+
+def get_logger():
+    logger = logging.getLogger('pokerbot')
+    logger.setLevel(logging.DEBUG)
+
+    fh = logging.FileHandler('pokerbot.log')
+    fh.setLevel(logging.DEBUG)
+
+    fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(fmt)
+
+    logger.addHandler(fh)
+    return logger
+
+
+logger = get_logger()
 
 app = Flask(__name__)
+
+db = Database(bot_config['mongo_port'])
+
+features = pokerbot.features.functions
+ob_processor = ObservationProcessor()
+teach_interval = bot_config['teach_interval']
+
+opponent_modeller = OpponentModeller(features, db, teach_interval, ob_processor)
+
+controller = Controller(GameState(), db, opponent_modeller)
+
 
 action_string_template = '''<?xml version="1.0" encoding="UTF-8"?>
                                 <action>
@@ -27,21 +56,14 @@ action_string_template = '''<?xml version="1.0" encoding="UTF-8"?>
                             </action>'''
 
 
-def getActionXml(action_type, amount=1):
+
+def get_action_xml(action_type, amount=1):
     return action_string_template.format(action_type, amount)
 
 
-def getObjectFromXmlData(data):
+def get_object_from_xml(data):
     data_str = data.decode()
     return untangle.parse(data_str)
-
-
-db = Database(bot_config['mongo_port'])
-features = pokerbot.features.functions
-
-
-opponent_modeller = OpponentModeller(features, db, bot_config['teach_interval'], "")
-controller = Controller(GameState(), db, opponent_modeller)
 
 
 @app.route('/', methods=['GET'])
@@ -71,7 +93,7 @@ def index():
 @app.route('/holecards', methods=['POST'])
 def hole_cards():
 
-    xml = getObjectFromXmlData(request.data)
+    xml = get_object_from_xml(request.data)
     cards = xml.holecards.cards.card #an array of 2 cards
 
     controller.bot_seat(int(xml.holecards.seat.cdata))
@@ -84,10 +106,10 @@ def hole_cards():
 def action():
 
     if request.method == 'GET':
-        xml = getActionXml ('call', 10)
+        xml = get_action_xml ('call', 10)
         return Response(xml, mimetype='text/xml');
     else:
-        xml = getObjectFromXmlData(request.data)
+        xml = get_object_from_xml(request.data)
         action = {}
         action['seat'] = xml.action.seat.cdata
         action['type'] = xml.action.type.cdata
@@ -103,7 +125,7 @@ def action():
 @app.route('/newgame', methods=['POST'])
 def newgame():
 
-    xml = getObjectFromXmlData(request.data)
+    xml = get_object_from_xml(request.data)
 
     players = [Seat()] * 10
 
@@ -118,7 +140,7 @@ def newgame():
 
 @app.route('/showdown', methods=['POST'])
 def showdown_event():
-    xml = getObjectFromXmlData(request.data)
+    xml = get_object_from_xml(request.data)
 
     for hand in xml.showdown.cards:
         cards = [x.cdata for x in hand.card]
@@ -130,7 +152,7 @@ def showdown_event():
 
 @app.route('/board', methods=['POST'])
 def board():
-    xml = getObjectFromXmlData(request.data)
+    xml = get_object_from_xml(request.data)
 
     stage = xml.board.stage.cdata
     cards = [x.cdata for x in xml.board.cards.card]
@@ -142,7 +164,7 @@ def board():
 
 @app.route('/gameover', methods=['POST'])
 def gameover():
-    xml = getObjectFromXmlData(request.data)
+    xml = get_object_from_xml(request.data)
 
     winning = xml.gameover.winning
 

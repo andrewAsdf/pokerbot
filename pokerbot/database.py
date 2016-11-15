@@ -40,8 +40,8 @@ class Database:
         self.meta.update({'_id':1}, {"$set": {'lastProcessedGame' : game_id}})
 
 
-    def get_games(self, from_id = nullId):
-        return self.games.find({'_id': {'$gt' : from_id}})
+    def get_games(self):
+        return self.games.find({'_id': {'$gt' : self.last_processed_game}})
 
 
     @property

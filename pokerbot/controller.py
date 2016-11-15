@@ -43,14 +43,14 @@ class Controller:
             raise RuntimeError('Invalid event type: {}'.format(type))
 
 
-    def new_game(self, players, button_seat):
+    def new_game(self, players, button_index):
         self.playing = True
         self.events = []
-        self.game.table.seats = players
 
+        self.game.table.seats = players
         self.seats_initial = deepcopy(players) #for storing in db
 
-        self.game.new_game(button_seat)
+        self.game.new_game(button_index)
 
 
     def bot_cards(self, cards):
@@ -79,8 +79,8 @@ class Controller:
                  }
                  for i, seat in enumerate(self.seats_initial) if not seat.empty]
 
-        self.db.add_game(seats, self.events, self.game.table.button_seat)
+        self.db.add_game(seats, self.events, self.game.table.button_index)
 
-        #self.opponentmodeller.game_added()
+        self.opponentmodeller.game_added()
 
         self.game.new_game()
