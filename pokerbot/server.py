@@ -1,7 +1,3 @@
-bot_config = {
-    'teach_interval' : 10,
-    'mongo_port': 27017
-}
 
 from pokerbot.controller import Controller
 from pokerbot.database import Database
@@ -38,13 +34,12 @@ logger = get_logger()
 
 app = Flask(__name__)
 
-db = Database(bot_config['mongo_port'])
+db = Database()
 
 features = pokerbot.features.functions
 ob_processor = ObservationProcessor()
-teach_interval = bot_config['teach_interval']
 
-opponent_modeller = OpponentModeller(features, db, teach_interval, ob_processor)
+opponent_modeller = OpponentModeller(features, db, 100, ob_processor)
 
 controller = Controller(GameState(), db, opponent_modeller)
 

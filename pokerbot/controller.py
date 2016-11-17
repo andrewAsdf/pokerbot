@@ -55,6 +55,7 @@ class Controller:
 
     def bot_cards(self, cards):
         self.cards = cards
+        self.game.table[self.seat].hand = cards
 
 
     def bot_seat(self, seat):

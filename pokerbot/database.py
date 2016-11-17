@@ -2,7 +2,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 
-nullId = ObjectId("000000000000000000000000")
+NULL_ID = ObjectId("000000000000000000000000")
 
 
 class Database:
@@ -11,10 +11,11 @@ class Database:
         self.db = self.client.poker
         self.games = self.db.games
         self.meta = self.db.meta
+        self.models = self.db.models
         self.opponentmodels = self.db.opponentmodels
 
         self.meta.update({ '_id': 1 },
-                         { '$setOnInsert': {'lastProcessedGame': nullId}, },
+                         { '$setOnInsert': {'lastProcessedGame': NULL_ID}, },
                          upsert = True)
 
     def add_game(self, seats, actions, button_seat):
@@ -47,5 +48,13 @@ class Database:
     @property
     def unprocessed_game_count(self):
         return self.games.count({'_id': {'$gt' : self.last_processed_game}})
+
+
+    def store_model(self, player_name, model):
+        self.models.insert_one({'name' : player_name, 'model' : model})
+
+
+    def retrieve_model(self, player_name):
+        return self.models.find_one({'name' : player_name})['model']
 
 
