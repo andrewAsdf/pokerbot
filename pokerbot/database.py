@@ -50,11 +50,12 @@ class Database:
         return self.games.count({'_id': {'$gt' : self.last_processed_game}})
 
 
-    def store_model(self, player_name, model):
+    def add_player_model(self, player_name, model):
         self.models.insert_one({'name' : player_name, 'model' : model})
 
 
-    def retrieve_model(self, player_name):
-        return self.models.find_one({'name' : player_name})['model']
+    def get_player_model(self, player_name):
+        found = self.models.find_one({'name' : player_name})
+        return found['model'] if found is not None else None
 
 

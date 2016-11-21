@@ -1,5 +1,6 @@
-from pokerbot.opponent_modeller import OpponentModeller
-import pokerbot.features as features
+from pokerbot.game_model import GameState
+from pokerbot.game_model import Seat
+from pokerbot.controller import Controller
 
 
 test_game = {
@@ -152,84 +153,54 @@ test_game = {
 
 class MockDB:
 
-    def __init__(self):
-        self.last_processed_game = 1
-        self.player_models = {}
-
-
-    def get_games(self):
-        return [test_game]
-
-
-    def store_player_model(self, name, model):
-        self.player_models[name] = model
-
-
-    def get_player_model(self, name):
-        if (self.player_models.get(name) == None):
-            return None
-        else:
-            return self.player_models[name]
-
-    @property
-    def unprocessed_game_count(self):
-        return 0
+    def add_game(self, seats, events, button_index):
+        pass
 
 
 
-class MockModelCreator():
+class MockOpponentModeller():
 
     def __init__(self):
-        self.feature_matrices = {}
+        pass
 
 
-    def make_model(self, inputs, answers, prev_model):
-        return inputs, answers
+    def game_added(self):
+        pass
 
 
+def create_game_state(table_data, button_seat):
+    game_state = GameState()
 
-class TestOpponentModeller:
+    for seat_data in table_data:
+        seat_number = seat_data['seat_number']
+
+        new_seat = Seat(seat_data['name'], seat_data['stack'])
+        new_seat.hand = seat_data['hand']
+
+        game_state.table[seat_number] = new_seat
+
+    game_state.new_game(button_seat)
+    return game_state
+
+
+class TestController():
 
     def setup_method(self):
-        model_creator = MockModelCreator()
-        self.opp_mod = OpponentModeller(features.functions, MockDB(), 1, model_creator)
+        self.game = create_game_state(test_game['table'], test_game['button'])
+        self.controller = Controller(self.game, MockDB(), MockOpponentModeller())
 
+    def test_replay(self):
+        [self.controller.handle_event(a) for a in test_game['actions']]
 
-    def test_create_game_state(self):
-        button = test_game['button']
-        table_data = test_game['table']
-        game = self.opp_mod.create_game_state(table_data, button)
+        assert self.game.table[1].chips == 99 #fold
+        assert self.game.table[2].chips == 100 #fold
+        assert self.game.table[3].chips == 95
+        assert self.game.table[4].chips == 99 #fold
+        assert self.game.table[5].chips == 95
 
-        assert len(game.table.active_players_ordered()) == 5
-        assert game.table[1].name == 'Jagbot'
-        assert game.table[5].name == 'MyBot'
+        assert not self.game.table[1].active
+        assert not self.game.table[2].active
+        assert self.game.table[3].active
+        assert not self.game.table[4].active
+        assert self.game.table[5].active
 
-        assert game.table[1].chips == 100
-        assert game.table[2].chips == 100 #button
-        assert game.table[3].chips == 99.5
-        assert game.table[4].chips == 99
-        assert game.table[5].chips == 100
-
-
-    def test_replay_game(self):
-        features = self.opp_mod.replay_game(test_game)
-        assert len(features.keys()) == 5
-
-        assert len(features['MyBot']) == 4
-        assert len(features['Jagbot']) == 3
-
-        assert len(features['MyBot'][0]) == 2 #they should be tuples
- 
-
-    def test_process_games(self):
-        self.opp_mod.process_games()
-        
-        assert len(self.opp_mod.db.get_player_model('MyBot')[0]) == 4
-        assert len(self.opp_mod.db.get_player_model('MyBot')[1]) == 4
-        # MockModelCreator returns the original input tuple,
-        # and MockDB stores it. 
-        assert self.opp_mod.db.get_player_model('MyBot')[1][0] == 0
-        assert self.opp_mod.db.get_player_model('MyBot')[1][1] == 0
-        assert self.opp_mod.db.get_player_model('MyBot')[1][2] == 0
-        assert self.opp_mod.db.get_player_model('MyBot')[1][3] == 0
-        # The second tuple contains ints for the player's actions

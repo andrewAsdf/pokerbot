@@ -71,7 +71,7 @@ class TestTable():
 
         assert self.table.current_index == 1
 
-    
+
 
     def test_active_players_ordered(self):
         self.table.new_game(5)
@@ -110,6 +110,13 @@ class TestGameState:
     def test_new_game(self):
         assert self.game.table[5].chips_bet == 0.5
         assert self.game.table[8].chips_bet == 1
+        assert self.game.pot == 1.5
+
+
+    def test_new_game_indexed(self):
+        self.game.new_game(5)
+        assert self.game.table[8].chips_bet == 0.5
+        assert self.game.table[1].chips_bet == 1
         assert self.game.pot == 1.5
 
 
@@ -222,4 +229,4 @@ class TestGameState:
         #Carly:  $2 #fold
 
         assert self.game.pot == 8
-        
+

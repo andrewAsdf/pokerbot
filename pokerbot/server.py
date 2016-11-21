@@ -106,10 +106,10 @@ def action():
     else:
         xml = get_object_from_xml(request.data)
         action = {}
-        action['seat'] = xml.action.seat.cdata
+        action['seat'] = int(xml.action.seat.cdata)
         action['type'] = xml.action.type.cdata
         try:
-            action['amount'] = xml.action.amount.cdata
+            action['amount'] = int(xml.action.amount.cdata)
         except IndexError:
             pass
 
@@ -165,7 +165,7 @@ def gameover():
 
     gameover_event = {}
     gameover_event['type'] = 'gameover'
-    gameover_event['wins'] = {w.seat.cdata : w.amount.cdata for w in winning}
+    gameover_event['wins'] = {int(w.seat.cdata) : int(w.amount.cdata) for w in winning}
 
     controller.receive_event(gameover_event)
     return Response()

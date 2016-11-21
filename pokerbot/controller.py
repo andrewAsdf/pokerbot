@@ -11,6 +11,7 @@ class Controller:
         self.db = db
         self.events = []
         self.seat = 0
+        self.seats_initial = [] #for storing in db
         self.cards = tuple()
         self.playing = False
         self.opponentmodeller = opponentmodeller
@@ -83,5 +84,3 @@ class Controller:
         self.db.add_game(seats, self.events, self.game.table.button_index)
 
         self.opponentmodeller.game_added()
-
-        self.game.new_game()
