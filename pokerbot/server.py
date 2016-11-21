@@ -2,10 +2,10 @@
 from pokerbot.controller import Controller
 from pokerbot.database import Database
 from pokerbot.game_model import GameState
-from pokerbot.opponent_modeller import OpponentModeller
-from pokerbot.opponent_modeller import ObservationProcessor
 from pokerbot.game_model import Seat
+from pokerbot.opponent_modeller import OpponentModeller
 import pokerbot.features
+import pokerbot.learning as learning
 
 import logging
 import untangle
@@ -37,9 +37,8 @@ app = Flask(__name__)
 db = Database()
 
 features = pokerbot.features.functions
-ob_processor = ObservationProcessor()
 
-opponent_modeller = OpponentModeller(features, db, 100, ob_processor)
+opponent_modeller = OpponentModeller(features, db, 100, learning)
 
 controller = Controller(GameState(), db, opponent_modeller)
 
@@ -109,7 +108,7 @@ def action():
         action['seat'] = int(xml.action.seat.cdata)
         action['type'] = xml.action.type.cdata
         try:
-            action['amount'] = int(xml.action.amount.cdata)
+            action['amount'] = float(xml.action.amount.cdata)
         except IndexError:
             pass
 
@@ -165,7 +164,7 @@ def gameover():
 
     gameover_event = {}
     gameover_event['type'] = 'gameover'
-    gameover_event['wins'] = {int(w.seat.cdata) : int(w.amount.cdata) for w in winning}
+    gameover_event['wins'] = {w.seat.cdata : float(w.amount.cdata) for w in winning}
 
     controller.receive_event(gameover_event)
     return Response()

@@ -45,10 +45,11 @@ class OpponentModeller:
         for name, feature in game_features.items():
             feature_transposed = list(zip(*feature))
 
+            self.db.add_player_features(name, *feature_transposed)
+
             prev_model = self.db.get_player_model(name)
-            model = self.model_creator.make_model(feature_transposed[0],\
-                    feature_transposed[1], prev_model)
-            self.db.store_player_model(name, model)
+            model = self.model_creator.make_model(*feature_transposed, prev_model)
+            self.db.add_player_model(name, model)
             self.models[name] = model
 
         self.set_last_processed_game(games[-1])
@@ -88,7 +89,7 @@ class OpponentModeller:
 
 
     def set_last_processed_game(self, last_game):
-        last_id = last_game
+        last_id = last_game['_id']
         self.last_processed_game = last_id
         self.db.last_processed_game = last_id
 
@@ -126,9 +127,3 @@ class OpponentModeller:
             return self.model_creator.use_model(self.models[player_name], feature_vec)
         else:
             return None
-
-
-class ModelContainer:
-
-    def new_observation(self, feature_vec, action):
-        pass

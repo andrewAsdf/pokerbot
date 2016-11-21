@@ -161,7 +161,7 @@ class MockDB:
         return [test_game]
 
 
-    def store_player_model(self, name, model):
+    def add_player_model(self, name, model):
         self.player_models[name] = model
 
 
@@ -170,6 +170,11 @@ class MockDB:
             return None
         else:
             return self.player_models[name]
+
+
+    def add_player_features(self, name, inputs, answers):
+        pass
+
 
     @property
     def unprocessed_game_count(self):

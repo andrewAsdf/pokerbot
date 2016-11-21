@@ -12,6 +12,7 @@ class Database:
         self.games = self.db.games
         self.meta = self.db.meta
         self.models = self.db.models
+        self.features = self.db.features
         self.opponentmodels = self.db.opponentmodels
 
         self.meta.update({ '_id': 1 },
@@ -56,6 +57,12 @@ class Database:
 
     def get_player_model(self, player_name):
         found = self.models.find_one({'name' : player_name})
-        return found['model'] if found is not None else None
+        return None if found is None else found['model']
 
 
+    def add_player_features(self, player_name, inputs, responses):
+        update = {
+                    '$set' : {'inputs' : inputs, 'responses':responses},
+                    '$setOnInsert' : {'name' : player_name}
+                 }
+        self.features.update({'name': player_name}, update, upsert = True)
