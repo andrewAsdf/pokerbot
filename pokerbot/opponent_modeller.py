@@ -25,6 +25,7 @@ class OpponentModeller:
         self.sample_amount = sample_amount
         self.unprocessed_game_count = db.unprocessed_game_count
         self.last_processed_game = db.last_processed_game
+        self.models = {} #for caching models
 
 
     def game_added(self):
@@ -48,6 +49,7 @@ class OpponentModeller:
             model = self.model_creator.make_model(feature_transposed[0],\
                     feature_transposed[1], prev_model)
             self.db.store_player_model(name, model)
+            self.models[name] = model
 
         self.set_last_processed_game(games[-1])
 
@@ -114,7 +116,16 @@ class OpponentModeller:
 
 
     def get_prediction(self, game_state):
-        pass
+        feature_vec = [f(game_state) for f in self.features]
+        player_name = game_state.table.current_seat.name
+
+        if (self.models.get(player_name) is None):
+            self.models[player_name] = self.db.get_player_model(player_name)
+
+        if (self.models.get(player_name) is not None):
+            return self.model_creator.use_model(self.models[player_name], feature_vec)
+        else:
+            return None
 
 
 class ModelContainer:

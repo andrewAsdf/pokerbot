@@ -187,6 +187,9 @@ class MockModelCreator():
         return inputs, answers
 
 
+    def use_model(self, model, features):
+        return 1
+
 
 class TestOpponentModeller:
 
@@ -233,3 +236,16 @@ class TestOpponentModeller:
         assert self.opp_mod.db.get_player_model('MyBot')[1][2] == 0
         assert self.opp_mod.db.get_player_model('MyBot')[1][3] == 0
         # The second tuple contains ints for the player's actions
+
+
+    def test_get_prediction(self):
+        button = test_game['button']
+        table_data = test_game['table']
+        game = self.opp_mod.create_game_state(table_data, button)
+
+        assert self.opp_mod.get_prediction(game) == None
+
+        self.opp_mod.process_games()
+
+        assert self.opp_mod.get_prediction(game) == 1
+
