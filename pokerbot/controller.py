@@ -24,6 +24,10 @@ class Controller:
         self.handle_event(event)
 
 
+    def get_action(self):
+        return "call"
+
+
     def handle_event(self, event):
         type = event['type']
 

@@ -4,3 +4,4 @@ flask
 pytest
 cython
 deuces
+scikit-learn

@@ -23,12 +23,15 @@ def get_logger():
     fh = logging.FileHandler('pokerbot.log')
     fh.setLevel(logging.DEBUG)
 
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
     fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(fmt)
+    ch.setFormatter(fmt)
 
     logger.addHandler(fh)
     return logger
-
 
 logger = get_logger()
 
@@ -100,7 +103,10 @@ def hole_cards():
 def action():
 
     if request.method == 'GET':
-        xml = get_action_xml ('call', 10)
+        action_string = controller.get_action()
+        logger.info("Bot action is: {}".format(action_string))
+
+        xml = get_action_xml (action_string, 10)
         return Response(xml, mimetype='text/xml');
     else:
         xml = get_object_from_xml(request.data)

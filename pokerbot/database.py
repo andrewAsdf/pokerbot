@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+import pickle
 
 
 NULL_ID = ObjectId("000000000000000000000000")
@@ -52,12 +53,20 @@ class Database:
 
 
     def add_player_model(self, player_name, model):
-        self.models.insert_one({'name' : player_name, 'model' : model})
+        model_data = pickle.dumps(model)
+        update = {
+                    '$set' : {'model' : pickle.dumps(model)},
+                    '$setOnInsert' : {'name' : player_name}
+                 }
+        self.models.update({'name': player_name}, update, upsert = True)
 
 
     def get_player_model(self, player_name):
         found = self.models.find_one({'name' : player_name})
-        return None if found is None else found['model']
+        if found is not None:
+            return pickle.loads(found['model'])
+        else:
+            return None
 
 
     def add_player_features(self, player_name, inputs, responses):
@@ -66,3 +75,7 @@ class Database:
                     '$setOnInsert' : {'name' : player_name}
                  }
         self.features.update({'name': player_name}, update, upsert = True)
+
+
+    def get_player_features(self, player_name):
+        return self.features.find_one({'name': player_name})
