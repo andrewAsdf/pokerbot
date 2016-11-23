@@ -92,6 +92,7 @@ class OpponentModeller:
         last_id = last_game['_id']
         self.last_processed_game = last_id
         self.db.last_processed_game = last_id
+        self.unprocessed_game_count = 0
 
 
     def feature_list_to_dict(self, game_features_list):
