@@ -1,3 +1,10 @@
+"""Functions for deriving game features from game state.
+Public module variables: 
+
+    functions -- A list containing the feature functions.
+
+"""
+
 import deuces.card
 import deuces.evaluator
 
@@ -54,7 +61,3 @@ def board_wetness(game_state):
 
 functions = [raise_count, pot_odds, position, bets_to_call, committed,
              active_player_number, stage]
-
-
-def get_features(game_state):
-    return {f.__name__ : f(game_state) for f in functions}

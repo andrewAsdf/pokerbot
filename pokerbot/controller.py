@@ -77,6 +77,13 @@ class Controller:
 
     def game_over(self):
         self.playing = False
+        game_data = self.create_game_data()
+        self.db.add_game(game_data)
+
+        self.opponentmodeller.game_added()
+
+
+    def create_game_data(self):
         seats = [{
                     'name': seat.name,
                     'seat_number': i,
@@ -85,6 +92,10 @@ class Controller:
                  }
                  for i, seat in enumerate(self.seats_initial) if not seat.empty]
 
-        self.db.add_game(seats, self.events, self.game.table.button_index)
+        return {
+            'actions' : self.events,
+            'table' : seats,
+            'button' : self.game.table.button_index
+        }
 
-        self.opponentmodeller.game_added()
+

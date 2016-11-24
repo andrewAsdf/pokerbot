@@ -12,7 +12,7 @@ class Database:
         self.db = self.client.poker
         self.games = self.db.games
         self.meta = self.db.meta
-        self.models = self.db.models
+        self.players = self.db.players
         self.features = self.db.features
         self.opponentmodels = self.db.opponentmodels
 
@@ -20,15 +20,7 @@ class Database:
                          { '$setOnInsert': {'lastProcessedGame': NULL_ID}, },
                          upsert = True)
 
-    def add_game(self, seats, actions, button_seat):
-        game = {}
-        game['actions'] = actions
-        game['table'] = seats
-        game['button'] = button_seat
-
-        for seat in seats:
-            pass
-
+    def add_game(self, game):
         object_id = self.games.insert_one(game).inserted_id
         return object_id
 
@@ -58,13 +50,29 @@ class Database:
                     '$set' : {'model' : pickle.dumps(model)},
                     '$setOnInsert' : {'name' : player_name}
                  }
-        self.models.update({'name': player_name}, update, upsert = True)
+        self.players.update({'name': player_name}, update, upsert = True)
 
 
     def get_player_model(self, player_name):
-        found = self.models.find_one({'name' : player_name})
+        found = self.players.find_one({'name' : player_name})
         if found is not None:
             return pickle.loads(found['model'])
+        else:
+            return None
+
+
+    def add_player_stat(self, player_name, stat_name, stat_value):
+        update = {
+                    '$set' : {stat_name : stat_value},
+                    '$setOnInsert' : {'name' : player_name}
+                 }
+        self.players.update({'name': player_name}, update, upsert = True)
+
+
+    def get_player_stat(self, player_name, stat_name):
+        found = self.players.find_one({'name' : player_name}, {stat_name : 1})
+        if found.get(stat_name) is not None:
+            return found[stat_name]
         else:
             return None
 

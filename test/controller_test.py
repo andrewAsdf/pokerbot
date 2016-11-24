@@ -153,16 +153,14 @@ test_game = {
 
 class MockDB:
 
-    def add_game(self, seats, events, button_index):
+    def add_game(self, game):
         pass
 
 
-
-class MockOpponentModeller():
+class MockOpponentModeller:
 
     def __init__(self):
         pass
-
 
     def game_added(self):
         pass
@@ -183,7 +181,7 @@ def create_game_state(table_data, button_seat):
     return game_state
 
 
-class TestController():
+class TestController:
 
     def setup_method(self):
         self.game = create_game_state(test_game['table'], test_game['button'])

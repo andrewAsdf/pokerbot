@@ -18,10 +18,11 @@ logger = logging.getLogger('pokerbot.opponent_modeller')
 
 class OpponentModeller:
 
-    def __init__(self, features, db, sample_amount, model_creator):
+    def __init__(self, features, db, sample_amount, model_creator, stats):
         self.features = features
         self.db = db
         self.model_creator = model_creator
+        self.stats = stats
         self.sample_amount = sample_amount
         self.unprocessed_game_count = db.unprocessed_game_count
         self.last_processed_game = db.last_processed_game
@@ -37,25 +38,44 @@ class OpponentModeller:
 
 
     def process_games(self):
+        '''Calculate all derived data from stored games, including models and
+        player statistics'''
         games = list(self.db.get_games())
 
-        game_features_list = [self.replay_game(g) for g in games]
-        game_features = self.feature_list_to_dict(game_features_list)
-
-        for name, feature in game_features.items():
-            feature_transposed = list(zip(*feature))
-
-            self.db.add_player_features(name, *feature_transposed)
-
-            prev_model = self.db.get_player_model(name)
-            model = self.model_creator.make_model(*feature_transposed, prev_model)
-            self.db.add_player_model(name, model)
-            self.models[name] = model
+        self.process_features(games)
+        self.process_stats(games)
 
         self.set_last_processed_game(games[-1])
 
 
-    def replay_game(self, game_data):
+    def process_features(self, games):
+        game_features_list = [self.get_features(g) for g in games]
+        game_features = self.feature_list_to_dict(game_features_list)
+
+        for name, features in game_features.items():
+            features_transposed = list(zip(*features))
+            self.db.add_player_features(name, *features_transposed)
+
+            prev_model = self.db.get_player_model(name) #for incremental learning
+            model = self.model_creator.make_model(*features_transposed, prev_model)
+
+            self.db.add_player_model(name, model)
+            self.models[name] = model
+
+
+    def process_stats(self, games):
+        stat_dicts = [s(games) for s in self.stats]
+
+        #TODO: merge resulting dicts if there will be more than one stat
+        stat_dict = stat_dicts[0]
+        
+        for player_name, stat in stat_dict.items():
+            for stat_name, value in stat_dict[player_name].items():
+                self.db.add_player_stat(player_name, stat_name, value)
+
+
+
+    def get_features(self, game_data):
         logger.debug('game: {}'.format(game_data['_id']))
 
         game_state = self.create_game_state(game_data['table'], game_data['button'])

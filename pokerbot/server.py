@@ -4,6 +4,7 @@ from pokerbot.database import Database
 from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
 from pokerbot.opponent_modeller import OpponentModeller
+from pokerbot.stat_creator import StatCreator
 import pokerbot.features
 import pokerbot.learning as learning
 

@@ -12,19 +12,24 @@ tp_number = len(features[players[0]])
 
 print('Training points: {}'.format(tp_number))
 
-X_train = np.matrix(features[players[0]]['inputs'][100:])
-y_train = np.array(features[players[0]]['responses'][100:])
+X = features[players[0]]['inputs']
+y = features[players[0]]['responses']
 
-X_test = np.matrix(features[players[0]]['inputs'][:100])
-y_test = np.array(features[players[0]]['responses'][:100])
+X_train = np.matrix(X)
+y_train = np.array(y)
 
-model = MLPClassifier(hidden_layer_sizes = [7, 5], max_iter = 300)
+X_test = np.matrix(X)
+y_test = np.array(y)
 
-fold_number = 6
+model = MLPClassifier(hidden_layer_sizes = [7, 5], max_iter = 2000)
+
+fold_number = 20
 
 print("Training with {}-fold crossvalidation".format(fold_number))
-results = cross_val_score(model, X_test, y_test, cv = fold_number)
+results = cross_val_score(model, X[:2000], y[:2000], cv = fold_number)
 
 print("Average training accuracy: {}".format(results.mean()))
 
+test_score = model.fit(X_train, y_train).score(X_test, y_test)
+print("Testing accuracy: {}".format(test_score))
 

@@ -1,5 +1,6 @@
 from pokerbot.opponent_modeller import OpponentModeller
 import pokerbot.features as features
+import pokerbot.stats as stats
 
 
 test_game = {
@@ -155,6 +156,7 @@ class MockDB:
     def __init__(self):
         self.last_processed_game = 1
         self.player_models = {}
+        self.player_stats = {}
 
 
     def get_games(self):
@@ -176,13 +178,20 @@ class MockDB:
         pass
 
 
+    def add_player_stat(self, name, stat, value):
+        if self.player_stats.get(name) is None:
+            self.player_stats[name] = {}
+
+        self.player_stats[name][stat] = value
+
+
     @property
     def unprocessed_game_count(self):
         return 0
 
 
 
-class MockModelCreator():
+class MockModelCreator:
 
     def __init__(self):
         self.feature_matrices = {}
@@ -196,11 +205,16 @@ class MockModelCreator():
         return 1
 
 
+class MockStatCreator:
+    pass
+
+
 class TestOpponentModeller:
 
     def setup_method(self):
         model_creator = MockModelCreator()
-        self.opp_mod = OpponentModeller(features.functions, MockDB(), 1, model_creator)
+        stat_creator = MockStatCreator()
+        self.opp_mod = OpponentModeller(features.functions, MockDB(), 1, model_creator, stats.functions)
 
 
     def test_create_game_state(self):
@@ -219,23 +233,30 @@ class TestOpponentModeller:
         assert game.table[5].chips == 100
 
 
-    def test_replay_game(self):
-        features = self.opp_mod.replay_game(test_game)
+    def test_get_features(self):
+        features = self.opp_mod.get_features(test_game)
         assert len(features.keys()) == 5
 
         assert len(features['MyBot']) == 4
         assert len(features['Jagbot']) == 3
 
         assert len(features['MyBot'][0]) == 2 #they should be tuples
- 
+
+
+    def test_process_stats(self):
+        self.opp_mod.process_stats([test_game])
+
+        assert self.opp_mod.db.player_stats['Jagbot']['vpip'] == 1
+        # An actual stat is used here for testing purposes
+
 
     def test_process_games(self):
         self.opp_mod.process_games()
-        
+
         assert len(self.opp_mod.db.get_player_model('MyBot')[0]) == 4
         assert len(self.opp_mod.db.get_player_model('MyBot')[1]) == 4
         # MockModelCreator returns the original input tuple,
-        # and MockDB stores it. 
+        # and MockDB stores it.
         assert self.opp_mod.db.get_player_model('MyBot')[1][0] == 0
         assert self.opp_mod.db.get_player_model('MyBot')[1][1] == 0
         assert self.opp_mod.db.get_player_model('MyBot')[1][2] == 0
