@@ -59,3 +59,18 @@ class TestFeatures:
         self.game.call()
 
         assert features.committed(self.game) == True
+
+
+    def test_board_card_rank(self):
+        self.game.table.board = ['Ad', 'Kc', 'Qd']
+        assert features.first_card_rank(self.game) == 13 / 13
+        assert features.second_card_rank(self.game) == 12 / 13
+        assert features.third_card_rank(self.game) == 11 / 13
+        assert features.fourth_card_rank(self.game) == 0
+
+
+    def test_card_on_board(self):
+        self.game.table.board = ['Ad', 'Tc', '9d']
+        assert features.ace_on_board(self.game)
+        assert not features.king_on_board(self.game)
+

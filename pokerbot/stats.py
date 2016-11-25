@@ -39,8 +39,7 @@ def vpip(games):
             if payed:
                 player_pays[name]['payed'] += 1
 
-
     return {k : {'vpip' : v['payed'] / v['total']} for k, v in player_pays.items()}
-    
+
 
 functions = [vpip] #more stats could be added to this list
