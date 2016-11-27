@@ -6,7 +6,7 @@ stage_numbers = {'flop' : 1, 'turn' : 2, 'river' : 3}
 
 class Controller:
 
-    def __init__(self, game, db, opponentmodeller):
+    def __init__(self, game, db, opponent_modeller, decision_maker):
         self.game = game
         self.db = db
         self.events = []
@@ -14,7 +14,8 @@ class Controller:
         self.seats_initial = [] #for storing in db
         self.cards = tuple()
         self.playing = False
-        self.opponentmodeller = opponentmodeller
+        self.opponent_modeller = opponent_modeller
+        self.decision_maker = decision_maker
 
 
     def receive_event(self, event):
@@ -25,7 +26,7 @@ class Controller:
 
 
     def get_action(self):
-        return "call"
+        return decision_maker.get_action(game)
 
 
     def handle_event(self, event):
@@ -80,7 +81,7 @@ class Controller:
         game_data = self.create_game_data()
         self.db.add_game(game_data)
 
-        self.opponentmodeller.game_added()
+        self.opponent_modeller.game_added()
 
 
     def create_game_data(self):

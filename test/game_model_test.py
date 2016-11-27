@@ -4,6 +4,24 @@ from pokerbot.game_model import Table
 from pokerbot.game_model import Seat
 from pokerbot.game_model import GameState
 
+
+class MockCardProvider:
+    def __init__(self):
+        self.hands = ['7s', '6s', '5s', '4s', '3s', '2s']
+
+    def get_hand(self):
+        return [self.hands.pop(), self.hands.pop()]
+
+    def get_flop(self):
+        return ['8s', '9s', 'Ts']
+
+    def get_turn(self):
+        return 'Js'
+
+    def get_river(self):
+        return 'Qs'
+
+
 class TestSeat():
 
     def setup_method(self):
@@ -36,7 +54,7 @@ class TestTable():
 
     def setup_method(self):
         self.table = Table()
-        self.table[1] = Seat('Andy', 40)
+        self.table[1] = Seat('Andy', 40) #button
         self.table[5] = Seat('Blaine', 100)
         self.table[8] = Seat('Carly', 120)
 
@@ -66,11 +84,8 @@ class TestTable():
 
         assert button_index == 1
 
-        small_blind = self.table.next_index(button_index, 1)
-        big_blind = self.table.next_index(button_index, 2)
-
         assert self.table.current_index == 1
-
+        #there are 3 players so button speaks first on the preflop
 
 
     def test_active_players_ordered(self):
@@ -97,6 +112,12 @@ class TestTable():
         assert l[1].name == 'Andy'
 
 
+    def test_active_player_count(self):
+        self.table.new_game(5)
+
+        assert self.table.active_player_count == 3
+
+
 class TestGameState:
 
     def setup_method(self):
@@ -121,7 +142,7 @@ class TestGameState:
 
 
     def test_call(self):
-        self.game.call()
+        self.game.call() #Andy
 
         assert self.game.table[1].chips_bet == 1
         assert self.game.to_call == 1
@@ -130,14 +151,14 @@ class TestGameState:
 
 
     def test_bet(self):
-        self.game.bet()
+        self.game.bet() #Andy
 
         assert self.game.to_call == 2
         assert self.game.table[1].chips_bet == 2
         assert self.game.table.current_index == 5
         assert self.game.pot == 3.5
 
-        self.game.bet()
+        self.game.bet() #Andy
 
         assert self.game.to_call == 3
         assert self.game.table[5].chips_bet == 3
@@ -146,8 +167,8 @@ class TestGameState:
 
 
     def test_bet_call(self):
-        self.game.bet()
-        self.game.call()
+        self.game.bet() #Andy
+        self.game.call() #Blaine
 
         assert self.game.to_call == 2
         assert self.game.pot == 5
@@ -155,9 +176,9 @@ class TestGameState:
 
 
     def test_fold(self):
-        self.game.fold()
-        self.game.call()
-        self.game.call()
+        self.game.fold() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
 
         assert self.game.to_call == 1
         assert self.game.pot == 2
@@ -165,52 +186,75 @@ class TestGameState:
 
 
     def test_new_stage(self):
-        self.game.call()
-        self.game.call()
-        self.game.call()
-        self.game._next_stage()
+        self.game.call() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
 
-        assert self.game.to_call == 0
         assert self.game.pot == 3
-        assert self.game.table[1].chips == 99
-        assert self.game.table[1].chips_bet == 0
+        assert self.game.to_call == 0
+
+        assert self.game.table.current_index == 5
         assert self.game.table[5].chips == 99
         assert self.game.table[5].chips_bet == 0
-        assert self.game.table[8].chips == 99
-        assert self.game.table[8].chips_bet == 0
 
 
     def test_new_stage_no_fold(self):
-        self.game.fold()
-        self.game.call()
-        self.game.call()
-        self.game._next_stage()
+        self.game.fold() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
 
         assert not self.game.table[1].active
 
 
     def test_turn_and_river_bet(self):
-        self.game.call()
-        self.game.call()
-        self.game.call()
-        self.game._next_stage()
-        self.game.call()
-        self.game.call()
-        self.game.call()
-        self.game._next_stage()
-        self.game.bet()
+        self.game.call() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
 
-        assert self.game.table[1].chips_bet == 2 #on the turn bet is 2BB
-        assert self.game.table[1].chips == 97
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+
+        self.game.bet() #Blaine
+
+        assert self.game.table[5].chips_bet == 2 #on the turn bet is 2BB
+        assert self.game.table[5].chips == 97
         assert self.game.pot == 5
 
 
+    def test_game_over(self):
+        self.game.call() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+
+        assert self.game.is_terminal()
+
+
+    def test_game_over_fold(self):
+        self.game.fold() #Andy
+        self.game.fold() #Blaine
+
+        assert self.game.is_terminal()
+
+
     def test_pot_multiple_stages(self):
-        self.game.call()
-        self.game.call()
-        self.game.bet()
-        self.game.call()
-        self.game.call()
+        self.game.call() #Andy
+        self.game.call() #Blaine
+        self.game.bet()  #Carly
+        self.game.call() #Andy
+        self.game.call() #Blaine
 
         #Andy:   $2
         #Blaine: $2
@@ -218,15 +262,41 @@ class TestGameState:
 
         assert self.game.pot == 6
 
-        self.game._next_stage()
-        self.game.call()
-        self.game.bet()
-        self.game.fold()
-        self.game.call()
+        self.game.call() #Blaine
+        self.game.bet() #Carly
+        self.game.fold() #Andy
+        self.game.call() #Blaine
 
         #Andy:   $3
         #Blaine: $3
         #Carly:  $2 #fold
 
         assert self.game.pot == 8
+
+
+    def test_card_provider(self):
+        self.game.card_provider = MockCardProvider()
+        self.game.new_game()
+
+        assert self.game.table[1].hand == ['2s', '3s']
+        assert self.game.table[5].hand == ['4s', '5s']
+        assert self.game.table[8].hand == ['6s', '7s']
+
+        self.game.call() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
+
+        assert self.game.table.board == ['8s', '9s', 'Ts']
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+
+        assert self.game.table.board == ['8s', '9s', 'Ts', 'Js']
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+
+        assert self.game.table.board == ['8s', '9s', 'Ts', 'Js', 'Qs']
 

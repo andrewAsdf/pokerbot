@@ -166,6 +166,12 @@ class MockOpponentModeller:
         pass
 
 
+class MockDecisionMaker:
+
+    def get_action(game_state):
+        return 'call'
+
+
 def create_game_state(table_data, button_seat):
     game_state = GameState()
 
@@ -185,7 +191,8 @@ class TestController:
 
     def setup_method(self):
         self.game = create_game_state(test_game['table'], test_game['button'])
-        self.controller = Controller(self.game, MockDB(), MockOpponentModeller())
+        objects = [MockDB(), MockOpponentModeller(), MockDecisionMaker()]
+        self.controller = Controller(self.game, *objects)
 
     def test_replay(self):
         [self.controller.handle_event(a) for a in test_game['actions']]

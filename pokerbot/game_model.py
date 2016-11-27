@@ -28,6 +28,10 @@ class Seat:
         self.chips_bet = 0
 
 
+    def set_hand(self, hand):
+        self.hand = hand
+
+
     @property
     def empty(self):
         return self.name == ''
@@ -45,6 +49,7 @@ class Table:
         self.seats = [Seat()] * 10 #table size
         self.current_index = 0
         self.button_index = 0
+        self.stop_index = 0
         self.board = []
 
 
@@ -81,16 +86,22 @@ class Table:
             raise RuntimeError('Invalid starting seat!')
 
         self.current_index = self.next_index(self.button_index, 3)
+        self.stop_index = self.next_index(self.button_index, 3)
 
 
     def next_stage(self):
-        self.current_index = self.next_index(self.button_index, 3)
-
+        self.current_index = self.next_index(self.button_index, 1)
+        self.stop_index = self.next_index(self.button_index, 1)
 
 
     def active_players_ordered(self):
         players = self[self.button_index:] + self[:self.button_index]
         return [p for p in players if p.active]
+
+
+    @property
+    def active_player_count(self):
+        return sum(p.active for p in self.seats)
 
 
     def move_button(self):
@@ -118,12 +129,14 @@ class Table:
 
 class GameState:
 
-    def __init__ (self, big_blind = 1):
+    def __init__ (self, big_blind = 1, card_provider = None):
         self.stage = 0
         self._pot_previous_rounds = 0
         self.to_call = big_blind
         self.table = Table()
         self.big_blind = big_blind
+        self.bet_count = 0
+        self.card_provider = card_provider
 
 
     @property
@@ -141,11 +154,9 @@ class GameState:
         return sum([s.chips_bet for s in self.table.seats])
 
 
-    def new_game(self, start_from = None):
-        self.table.new_game(start_from)
-        self.to_call = self.big_blind
-        self._pot_previous_rounds = 0
-        self._postBlinds()
+    @property
+    def _bet_count(self):
+        return self.to_call / self.big_blind
 
 
     def fold(self):
@@ -154,7 +165,7 @@ class GameState:
         self.table.next_seat()
 
         if self.stage_over():
-            self.next_stage()
+            self._next_stage()
 
 
     def call(self):
@@ -166,7 +177,7 @@ class GameState:
         self.table.next_seat()
 
         if self.stage_over():
-            self.next_stage()
+            self._next_stage()
 
 
     def bet(self):
@@ -177,17 +188,24 @@ class GameState:
 
         self._bet(player, self.current_bet_size)
 
+        self.table.stop_index = self.table.current_index
         self.table.next_seat()
 
 
-    def _next_stage(self):
-        self.stage += 1
-        self.to_call = 0
+    def new_game(self, start_from = None):
+        self.table.new_game(start_from)
 
-        self._pot_previous_rounds += self._current_round_pot
-        [s.clear_bets() for s in self.table.seats]
+        if self.card_provider is not None:
+            [p.set_hand(self.card_provider.get_hand())
+                    for p in self.table.seats if p.active]
 
-        self.table.next_stage()
+        self.to_call = self.big_blind
+        self._pot_previous_rounds = 0
+        self._postBlinds()
+
+
+    def possible_to_raise(self):
+        return self.bet_count < 4
 
 
     def _call(self, player):
@@ -200,6 +218,24 @@ class GameState:
         self.to_call += bet
 
 
+    def _next_stage(self):
+        self.stage += 1
+        self.to_call = 0
+
+        self._pot_previous_rounds += self._current_round_pot
+        [s.clear_bets() for s in self.table.seats]
+
+        if self.card_provider is not None:
+            if self.stage == 1:
+                self.table.board = self.card_provider.get_flop()
+            elif self.stage == 2:
+                self.table.board.append(self.card_provider.get_turn())
+            elif self.stage == 3:
+                self.table.board.append(self.card_provider.get_river())
+
+        self.table.next_stage()
+
+
     def _postBlinds(self): #TODO - for 2 players
         self.table.small_blind_seat.place_bet(self.big_blind / 2)
         self.table.big_blind_seat.place_bet(self.big_blind)
@@ -207,18 +243,15 @@ class GameState:
 
 
     def stage_over(self):
-        return False
-
-
-    def reward(self, parent, action):
-        pass
+        return self.table.current_index == self.table.stop_index
 
 
     def is_terminal(self):
-        pass
+        return self.table.active_player_count == 1 or self.stage == 4
+        #stage will be incremented after river, so we check that
 
 
-    def is_big_blind(self):
+    def reward(self, parent, action):
         pass
 
 

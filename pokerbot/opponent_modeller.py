@@ -8,7 +8,7 @@ class _ReplayController(Controller):
     '''Controller class for replaying games'''
 
     def __init__(self, game):
-        super().__init__(game, None, None)
+        super().__init__(game, None, None, None)
 
     def game_over(self):
         pass

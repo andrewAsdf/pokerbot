@@ -5,6 +5,7 @@ from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
 from pokerbot.opponent_modeller import OpponentModeller
 from pokerbot.stat_creator import StatCreator
+from pokerbot.decision_maker import DecisionMaker()
 import pokerbot.features
 import pokerbot.learning as learning
 
@@ -44,7 +45,7 @@ features = pokerbot.features.functions
 
 opponent_modeller = OpponentModeller(features, db, 100, learning)
 
-controller = Controller(GameState(), db, opponent_modeller)
+controller = Controller(GameState(), db, opponent_modeller, DecisionMaker())
 
 
 action_string_template = '''<?xml version="1.0" encoding="UTF-8"?>
