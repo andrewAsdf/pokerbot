@@ -3,6 +3,7 @@ from pokerbot.decision_maker import TreeNode
 from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
 from random import Random
+from copy import copy
 import logging
 
 def get_logger():
@@ -68,6 +69,11 @@ class MockCardProvider:
         self.random.shuffle(self.cards)
 
 
+    def copy(self):
+        new_prov = copy(self)
+        new_prov.cards = copy(self.cards)
+        return new_prov
+
 
 class MockOpponentModeller:
 
@@ -88,7 +94,7 @@ class MockOpponentModeller:
 class TestTreeNode:
 
     def setup_method(self):
-        self.root = TreeNode(None, 0)
+        self.root = TreeNode(GameState(), 0)
         child1 = self.root.create_child(-1)
         child1.reward = 3
         child2 = self.root.create_child(0)
@@ -99,7 +105,6 @@ class TestTreeNode:
 
     def test_get_best_action(self):
         assert self.root.get_best_action() == -1
-
 
 
 

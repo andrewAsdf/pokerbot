@@ -1,4 +1,3 @@
-from copy import deepcopy
 from random import Random
 import math
 import logging
@@ -17,7 +16,7 @@ class TreeNode:
         self.visits = 1
         self.reward = 0
 
-        self.state = deepcopy(game_state)
+        self.state = game_state.copy()
         self.our_seat = our_seat
 
 

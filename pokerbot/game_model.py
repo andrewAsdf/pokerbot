@@ -1,5 +1,6 @@
 from deuces import Card
 from deuces import Evaluator
+from copy import copy
 
 
 class Seat:
@@ -56,6 +57,13 @@ class Table:
         self.button_index = 0
         self.stop_index = 0
         self.board = []
+
+
+    def copy(self):
+        new_table = copy(self)
+        new_table.board = copy(self.board)
+        new_table.seats = [copy(s) for s in self.seats]
+        return new_table
 
 
     def __getitem__(self, index):
@@ -141,13 +149,21 @@ class GameState:
     evaluator = Evaluator()
 
     def __init__ (self, big_blind = 1, card_provider = None):
+        self.card_provider = card_provider
+        self.table = Table()
         self.stage = 0
         self._pot_previous_rounds = 0
         self.to_call = big_blind
-        self.table = Table()
         self.big_blind = big_blind
         self.bet_count = 0
-        self.card_provider = card_provider
+
+
+    def copy(self):
+        new_state = copy(self)
+        new_state.table = self.table.copy()
+        if self.card_provider is not None:
+            new_state.card_provider = self.card_provider.copy()
+        return new_state
 
 
     @property
