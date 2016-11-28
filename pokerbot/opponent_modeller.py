@@ -68,7 +68,7 @@ class OpponentModeller:
 
         #TODO: merge resulting dicts if there will be more than one stat
         stat_dict = stat_dicts[0]
-        
+
         for player_name, stat in stat_dict.items():
             for stat_name, value in stat_dict[player_name].items():
                 self.db.add_player_stat(player_name, stat_name, value)

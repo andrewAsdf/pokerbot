@@ -239,14 +239,14 @@ class TestGameState:
         self.game.call() #Carly
         self.game.call() #Andy
 
-        assert self.game.is_terminal()
+        assert self.game.is_over()
 
 
     def test_game_over_fold(self):
         self.game.fold() #Andy
         self.game.fold() #Blaine
 
-        assert self.game.is_terminal()
+        assert self.game.is_over()
 
 
     def test_pot_multiple_stages(self):
@@ -300,3 +300,12 @@ class TestGameState:
 
         assert self.game.table.board == ['8s', '9s', 'Ts', 'Js', 'Qs']
 
+
+    def test_get_winner(self):
+        self.game.table.board = ['8s', '9s', 'Ts', 'Jd', 'Qd']
+
+        self.game.table[1].hand = ['2s', '3s']
+        self.game.table[5].hand = ['4s', '5s']
+        self.game.table[8].hand = ['6s', '7s']
+
+        assert self.game.get_winners() == [self.game.table[8]]

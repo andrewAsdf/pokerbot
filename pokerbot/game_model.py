@@ -1,3 +1,5 @@
+from deuces import Card
+from deuces import Evaluator
 
 
 class Seat:
@@ -8,11 +10,13 @@ class Seat:
         self.name = name
         self.chips = chips
         self._folded = False
+        self._total_chips_bet = 0 #TODO: hack for counting loss
 
 
     def place_bet(self, amount):
         self.chips -= amount
         self.chips_bet += amount
+        self._total_chips_bet += amount
 
 
     def clear_bets(self):
@@ -26,6 +30,7 @@ class Seat:
     def new_game(self):
         self._folded = False
         self.chips_bet = 0
+        self._total_chips_bet = 0
 
 
     def set_hand(self, hand):
@@ -92,6 +97,10 @@ class Table:
     def next_stage(self):
         self.current_index = self.next_index(self.button_index, 1)
         self.stop_index = self.next_index(self.button_index, 1)
+
+
+    def active_players(self):
+        return [p for p in self.seats if p.active]
 
 
     def active_players_ordered(self):
@@ -246,20 +255,25 @@ class GameState:
         return self.table.current_index == self.table.stop_index
 
 
-    def is_terminal(self):
+    def is_over(self):
         return self.table.active_player_count == 1 or self.stage == 4
         #stage will be incremented after river, so we check that
 
 
-    def reward(self, parent, action):
-        pass
+    @staticmethod
+    def evaluate_hand(ascii_cards):
+        return Evaluator().evaluate([Card.new(a) for a in ascii_cards],[])
 
 
-    def __eq__(self):
-        pass
+    def get_winners(self):
+        '''Return array of winner(s) of the game. No checking is performed whether game\
+        is over.'''
+        active = self.table.active_players()
 
+        if len(active) == 1:
+            return [active.pop()]
 
-    def __hash__(self):
-        pass
+        hand_ranks = {p : GameState.evaluate_hand(p.hand + self.table.board) for p in active}
+        winner_rank = min(hand_ranks.values()) #deuces uses small ranks for good hands
 
-
+        return [p for p, rank in hand_ranks.items() if rank == winner_rank]
