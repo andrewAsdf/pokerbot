@@ -138,6 +138,8 @@ class Table:
 
 class GameState:
 
+    evaluator = Evaluator()
+
     def __init__ (self, big_blind = 1, card_provider = None):
         self.stage = 0
         self._pot_previous_rounds = 0
@@ -260,9 +262,8 @@ class GameState:
         #stage will be incremented after river, so we check that
 
 
-    @staticmethod
-    def evaluate_hand(ascii_cards):
-        return Evaluator().evaluate([Card.new(a) for a in ascii_cards],[])
+    def _evaluate_hand(self, ascii_cards):
+        return self.evaluator.evaluate([Card.new(a) for a in ascii_cards],[])
 
 
     def get_winners(self):
@@ -273,7 +274,7 @@ class GameState:
         if len(active) == 1:
             return [active.pop()]
 
-        hand_ranks = {p : GameState.evaluate_hand(p.hand + self.table.board) for p in active}
+        hand_ranks = {p : self._evaluate_hand(p.hand + self.table.board) for p in active}
         winner_rank = min(hand_ranks.values()) #deuces uses small ranks for good hands
 
         return [p for p, rank in hand_ranks.items() if rank == winner_rank]

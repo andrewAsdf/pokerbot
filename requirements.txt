@@ -5,3 +5,4 @@ pytest
 cython
 deuces
 scikit-learn
+tabulate

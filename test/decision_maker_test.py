@@ -1,7 +1,24 @@
-from pokerbot.decision_maker import DecisionMaker
+from pokerbot.decision_maker import MCTSDecisionMaker
+from pokerbot.decision_maker import TreeNode
 from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
 from random import Random
+import logging
+
+def get_logger():
+    logger = logging.getLogger('pokerbot')
+    logger.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(fmt)
+
+    logger.addHandler(ch)
+    return logger
+
+logger = get_logger()
 
 class MockDB:
 
@@ -31,7 +48,7 @@ class MockCardProvider:
 
 
     def get_flop(self):
-        return [self.cards.pop(), self.cards.pop(), self.cards.pop]
+        return [self.cards.pop(), self.cards.pop(), self.cards.pop()]
 
 
     def get_turn(self):
@@ -57,20 +74,40 @@ class MockOpponentModeller:
     def __init__(self):
         self.random = Random(420)
 
-    def get_prediction(game_state):
+    def get_prediction(self, game_state):
         name = game_state.table.current_seat.name
         can_raise = game_state.possible_to_raise
 
         if name == 'Blaine':
-            return self.random.choice(['call', 'raise'])
+            return self.random.choice([0, 1])
         elif name == 'Carly':
-            return self.random.choice(['call', 'raise', 'fold'])
+            return self.random.choice([-1, 0, 1])
+
+
+
+class TestTreeNode:
+
+    def setup_method(self):
+        self.root = TreeNode(None, 0)
+        child1 = self.root.create_child(-1)
+        child1.reward = 3
+        child2 = self.root.create_child(0)
+        child2.reward = 2
+        child3 = self.root.create_child(1)
+        child3.reward = 1
+
+
+    def test_get_best_action(self):
+        assert self.root.get_best_action() == -1
+
+
 
 
 class TestDecisionMaker:
 
     def setup_method(self):
-        self.decision_maker = DecisionMaker(MockOpponentModeller(), MockDB())
+        self.decision_maker = MCTSDecisionMaker(MockOpponentModeller(),
+                MockDB(), pseudo_random = True)
         self.game = GameState(card_provider = MockCardProvider())
         self.game.table[0] = Seat('Andy', 9999)
         self.game.table[1] = Seat('Blaine', 9999)
@@ -80,3 +117,9 @@ class TestDecisionMaker:
 
     def test_get_action(self):
         self.decision_maker.get_action(self.game, 0)
+
+
+if __name__ == '__main__':
+    test = TestDecisionMaker()
+    test.setup_method()
+    test.test_get_action()
