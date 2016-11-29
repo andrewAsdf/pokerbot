@@ -60,6 +60,7 @@ class TreeNode:
     def create_child(self, action_int):
         new_node = TreeNode(self.state, self.our_seat)
         new_node.parent = self
+        new_node.perform(action_int)
         self.children.append(new_node)
         self._children_actions.append(action_int)
         return new_node
@@ -96,20 +97,23 @@ class MCTSDecisionMaker:
         self.random = Random(420) if pseudo_random else Random()
 
 
-    def get_action(self, game_state, our_seat, max_iter=2000):
+    def get_action(self, game_state, max_iter=2000):
         logger.info('MCTS iteration count: {}'.format(max_iter))
+        our_seat = game_state.table.current_index
+        logger.info('Getting decision for player {}'
+                .format(game_state.table.current_seat.name))
 
-        root = TreeNode(game_state, our_seat)
+        self.root = TreeNode(game_state, our_seat)
 
         for i in range(max_iter):
-            if not i % 100:
+            if not i % 500:
                 logger.info('MCTS iteration: {}'.format(i))
-            selected_node = self._select(root)
+            selected_node = self._select(self.root)
             expanded_node = self._expand(selected_node)
             reward = self._simulate(expanded_node)
             self._backpropagate(expanded_node, reward)
 
-        action = root.get_best_action()
+        action = self.root.get_best_action()
         logger.info('Chosen action: {}'.format(action))
         return action
 

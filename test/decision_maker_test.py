@@ -5,6 +5,8 @@ from pokerbot.game_model import Seat
 from random import Random
 from copy import copy
 import logging
+from graphviz import Digraph
+from collections import deque
 
 def get_logger():
     logger = logging.getLogger('pokerbot')
@@ -82,30 +84,11 @@ class MockOpponentModeller:
 
     def get_prediction(self, game_state):
         name = game_state.table.current_seat.name
-        can_raise = game_state.possible_to_raise
 
         if name == 'Blaine':
             return self.random.choice([0, 1])
         elif name == 'Carly':
             return self.random.choice([-1, 0, 1])
-
-
-
-class TestTreeNode:
-
-    def setup_method(self):
-        self.root = TreeNode(GameState(), 0)
-        child1 = self.root.create_child(-1)
-        child1.reward = 3
-        child2 = self.root.create_child(0)
-        child2.reward = 2
-        child3 = self.root.create_child(1)
-        child3.reward = 1
-
-
-    def test_get_best_action(self):
-        assert self.root.get_best_action() == -1
-
 
 
 class TestDecisionMaker:
@@ -117,14 +100,56 @@ class TestDecisionMaker:
         self.game.table[0] = Seat('Andy', 9999)
         self.game.table[1] = Seat('Blaine', 9999)
         self.game.table[2] = Seat('Carly', 9999)
-        self.game.new_game()
+        self.game.new_game(0)
+
+
+    def test_get_best_action(self):
+        self.root = TreeNode(self.game, 0)
+        child1 = self.root.create_child(-1)
+        child1.reward = 3
+        child2 = self.root.create_child(0)
+        child2.reward = 2
+        child3 = self.root.create_child(1)
+        child3.reward = 1
+
+        assert self.root.get_best_action() == -1
 
 
     def test_get_action(self):
-        self.decision_maker.get_action(self.game, 0)
+        self.decision_maker.get_action(self.game)
+
+
+
+def get_graph(root, graph):
+    nodes = deque()
+    nodes.append(root)
+
+    while nodes:
+        node = nodes.popleft()
+
+        action = 'x'
+
+        if node.parent is not None:
+            graph.edge(str(hash(node.parent)), str(hash(node)))
+            action_index = node.parent.children.index(node)
+            action = str(node.parent._children_actions[action_index])
+
+        graph.node(str(hash(node)), 'r: {}, v: {}, p: {}, a: {}'.format(node.reward,
+            node.visits, node.state.table.current_seat.name, action))
+
+
+        [nodes.append(c) for c in node.children]
+
+
+
 
 
 if __name__ == '__main__':
     test = TestDecisionMaker()
     test.setup_method()
     test.test_get_action()
+
+    graph = Digraph()
+    graphviz_graph = get_graph(test.decision_maker.root, graph)
+    graph.view()
+

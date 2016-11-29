@@ -6,3 +6,4 @@ cython
 deuces
 scikit-learn
 tabulate
+graphviz

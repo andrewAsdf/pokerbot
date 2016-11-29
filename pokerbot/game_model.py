@@ -75,8 +75,10 @@ class Table:
 
 
     def next_index(self, seat_index, neighbor = 1):
-        """Returns the next active seat index given a seat number. Doesn't
-        check whether there are active players at the table."""
+        """Return the next active seat index given a seat number."""
+
+        if self.active_player_count == 0:
+            raise RuntimeError('Cannot get index for zero players!')
 
         next_index = seat_index
 
