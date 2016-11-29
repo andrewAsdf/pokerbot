@@ -134,14 +134,10 @@ def get_graph(root, graph):
             action_index = node.parent.children.index(node)
             action = str(node.parent._children_actions[action_index])
 
-        graph.node(str(hash(node)), 'r: {}, v: {}, p: {}, a: {}'.format(node.reward,
-            node.visits, node.state.table.current_seat.name, action))
-
+        graph.node(str(hash(node)), 'r: {}, v: {} p: {}, a: {}, s: {}'.format(node.reward,
+            node.visits, node.state.table.current_seat.name, action, node.state.stage))
 
         [nodes.append(c) for c in node.children]
-
-
-
 
 
 if __name__ == '__main__':

@@ -191,10 +191,17 @@ class GameState:
     def fold(self):
         player = self.table.current_seat
         player.fold()
+
+        folding_player_index = self.table.current_index
+
         self.table.next_seat()
 
         if self.stage_over():
             self._next_stage()
+        elif self.table.stop_index == folding_player_index:
+            self.table.stop_index = self.table.next_index(folding_player_index)
+            #if a player folds when first, next_index won't find it later so
+            #stage would never end
 
 
     def call(self):

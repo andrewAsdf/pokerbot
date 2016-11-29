@@ -178,11 +178,11 @@ class TestGameState:
     def test_fold(self):
         self.game.fold() #Andy
         self.game.call() #Blaine
-        self.game.call() #Carly
 
-        assert self.game.to_call == 1
+        assert self.game.table.current_index == 8
+        assert self.game.stage == 0
         assert self.game.pot == 2
-        assert self.game.table.current_index == 5
+        assert self.game.to_call == 1
 
 
     def test_new_stage(self):
@@ -192,29 +192,57 @@ class TestGameState:
 
         assert self.game.pot == 3
         assert self.game.to_call == 0
+        assert self.game.stage == 1
 
         assert self.game.table.current_index == 5
         assert self.game.table[5].chips == 99
         assert self.game.table[5].chips_bet == 0
 
 
-    def test_new_stage_no_fold(self):
+    def test_new_stage_fold(self):
         self.game.fold() #Andy
         self.game.call() #Blaine
         self.game.call() #Carly
 
+        assert self.game.stage == 1
         assert not self.game.table[1].active
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+
+        assert self.game.stage == 2
+
+
+    def test_new_stage_fold_after_button(self):
+        self.game.call() #Andy
+        self.game.fold() #Blaine
+        self.game.call() #Carly
+
+        assert self.game.stage == 1
+        assert not self.game.table[5].active
+
+        self.game.call() #Carly
+        self.game.call() #Andy
+
+        assert self.game.stage == 2
 
 
     def test_turn_and_river_bet(self):
+        assert self.game.table.current_seat.name == 'Andy'
         self.game.call() #Andy
+        assert self.game.table.current_seat.name == 'Blaine'
         self.game.call() #Blaine
+        assert self.game.table.current_seat.name == 'Carly'
         self.game.call() #Carly
 
+        assert self.game.table.current_seat.name == 'Blaine'
         self.game.call() #Blaine
+        assert self.game.table.current_seat.name == 'Carly'
         self.game.call() #Carly
+        assert self.game.table.current_seat.name == 'Andy'
         self.game.call() #Andy
 
+        assert self.game.table.current_seat.name == 'Blaine'
         self.game.bet() #Blaine
 
         assert self.game.table[5].chips_bet == 2 #on the turn bet is 2BB

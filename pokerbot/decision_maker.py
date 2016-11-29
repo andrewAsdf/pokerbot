@@ -106,8 +106,8 @@ class MCTSDecisionMaker:
         self.root = TreeNode(game_state, our_seat)
 
         for i in range(max_iter):
-            if not i % 500:
-                logger.info('MCTS iteration: {}'.format(i))
+            if not (i + 1) % 500:
+                logger.info('MCTS iteration: {}'.format(i + 1))
             selected_node = self._select(self.root)
             expanded_node = self._expand(selected_node)
             reward = self._simulate(expanded_node)
