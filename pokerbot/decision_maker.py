@@ -80,8 +80,6 @@ class TreeNode:
                 zip(self._children_actions, self.children) if node == best_child)
 
 
-
-
 def _node_UCT(node):
     n = node.visits
     r = node.reward
@@ -91,10 +89,11 @@ def _node_UCT(node):
 
 class MCTSDecisionMaker:
 
-    def __init__(self, opponent_modeller, db, pseudo_random = False):
+    def __init__(self, opponent_modeller, db, card_provider, pseudo_random = False):
         self.opponent_modeller = opponent_modeller
         self.db = db
         self.random = Random(420) if pseudo_random else Random()
+        self.card_provider = card_provider
 
 
     def get_action(self, game_state, max_iter=2000):
@@ -104,6 +103,7 @@ class MCTSDecisionMaker:
                 .format(game_state.table.current_seat.name))
 
         self.root = TreeNode(game_state, our_seat)
+        self._assign_card_provider(self.root)
 
         for i in range(max_iter):
             if not (i + 1) % 500:
@@ -133,18 +133,15 @@ class MCTSDecisionMaker:
         if (node.is_terminal()):
             return node
 
-        if node.our_turn():
-            for action in node.actions:
-                node.create_child(action)
-        else:
-            prediction = self._get_prediction(node)
-            node.create_child(prediction)
+        for action in node.actions:
+            node.create_child(action)
 
         return self.random.choice(node.children)
 
 
     def _simulate(self, node):
         simulation_node = node.copy()
+        simulation_node.state.card_provider.shuffle()
 
         while not simulation_node.is_terminal():
             if simulation_node.our_turn():
@@ -153,7 +150,6 @@ class MCTSDecisionMaker:
             else:
                 prediction = self._get_prediction(simulation_node)
                 simulation_node.perform(prediction)
-
 
         return simulation_node.get_reward()
 
@@ -171,3 +167,11 @@ class MCTSDecisionMaker:
             return prediction
         else: #this occurs when predictor tells to raise but it is not a valid move
             return 0
+
+
+    def _assign_card_provider(self, node):
+        our_cards = node.state.table[node.our_seat].hand
+        board_cards = node.state.table.board
+        self.card_provider.remove_cards(our_cards + board_cards)
+        self.card_provider.shuffle()
+        node.state.card_provider = self.card_provider

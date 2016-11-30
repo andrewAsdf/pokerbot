@@ -5,9 +5,9 @@ from copy import copy
 
 class Seat:
 
-    def __init__ (self, name = '', chips = 0):
+    def __init__ (self, name = '', chips = 0, hand = []):
         self.chips_bet = 0
-        self.hand = []
+        self.hand = hand
         self.name = name
         self.chips = chips
         self._folded = False
@@ -298,6 +298,9 @@ class GameState:
 
         if len(active) == 1:
             return [active.pop()]
+
+        if any(not p.hand for p in self.table.seats if p.active):
+            [p.set_hand([]) for p in self.table.seats if (not p.hand) and p.active]
 
         hand_ranks = {p : self._evaluate_hand(p.hand + self.table.board) for p in active}
         winner_rank = min(hand_ranks.values()) #deuces uses small ranks for good hands

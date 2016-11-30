@@ -41,9 +41,9 @@ class MockDB:
 
 class MockCardProvider:
 
-    def __init__(self):
-        self.random = Random(420)
-        self.shuffle()
+    def __init__(self, seed = 420):
+        self.random = Random(seed)
+        self.reset()
 
 
     def get_hand(self):
@@ -63,12 +63,20 @@ class MockCardProvider:
 
 
     def shuffle(self):
+        self.random.shuffle(self.cards)
+
+
+    def reset(self):
         self.cards = [ '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', 'Td',
             'Jd', 'Qd', 'Kd', 'Ad', '2c', '3c', '4c', '5c', '6c', '7c', '8c',
             '9c', 'Tc', 'Jc', 'Qc', 'Kc', 'Ac', '2s', '3s', '4s', '5s', '6s',
             '7s', '8s', '9s', 'Ts', 'Js', 'Qs', 'Ks', 'As', '2h', '3h', '4h',
             '5h', '6h', '7h', '8h', '9h', 'Th', 'Jh', 'Qh', 'Kh', 'Ah' ]
-        self.random.shuffle(self.cards)
+        self.shuffle()
+
+
+    def remove_cards(self, removed_cards):
+        [self.cards.remove(c) for c in removed_cards]
 
 
     def copy(self):
@@ -95,9 +103,9 @@ class TestDecisionMaker:
 
     def setup_method(self):
         self.decision_maker = MCTSDecisionMaker(MockOpponentModeller(),
-                MockDB(), pseudo_random = True)
-        self.game = GameState(card_provider = MockCardProvider())
-        self.game.table[0] = Seat('Andy', 9999)
+                MockDB(), MockCardProvider(), pseudo_random = True)
+        self.game = GameState()
+        self.game.table[0] = Seat('Andy', 9999, ['As', 'Ad'])
         self.game.table[1] = Seat('Blaine', 9999)
         self.game.table[2] = Seat('Carly', 9999)
         self.game.new_game(0)

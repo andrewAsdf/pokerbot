@@ -11,7 +11,8 @@ def make_model(inputs, answers, prev_model = None):
         return prev_model
 
 
-def use_model(model, feature_vec):
-    return model.predict(feature_vec)
-
-
+def use_model(model, feature_vec, get_prob = False):
+    if get_prob:
+        return model.predict_proba(feature_vec)
+    else:
+        return model.predict(feature_vec)
