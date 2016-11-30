@@ -150,7 +150,7 @@ class GameState:
 
     evaluator = Evaluator()
 
-    def __init__ (self, big_blind = 1, card_provider = None):
+    def __init__ (self, big_blind = 1, card_provider = None, auto_stage = True):
         self.card_provider = card_provider
         self.table = Table()
         self.stage = 0
@@ -158,6 +158,7 @@ class GameState:
         self.to_call = big_blind
         self.big_blind = big_blind
         self.bet_count = 0
+        self.auto_stage = auto_stage
 
 
     def copy(self):
@@ -196,9 +197,10 @@ class GameState:
 
         self.table.next_seat()
 
-        if self.stage_over():
+        if self.auto_stage and self.stage_over():
             self._next_stage()
-        elif self.table.stop_index == folding_player_index:
+
+        if self.table.stop_index == folding_player_index:
             self.table.stop_index = self.table.next_index(folding_player_index)
             #if a player folds when first, next_index won't find it later so
             #stage would never end
@@ -212,7 +214,7 @@ class GameState:
 
         self.table.next_seat()
 
-        if self.stage_over():
+        if self.auto_stage and self.stage_over():
             self._next_stage()
 
 
