@@ -62,6 +62,10 @@ class MockCardProvider:
         return self.cards.pop()
 
 
+    def peek_cards(number):
+        return self.cards[-number:]
+
+
     def shuffle(self):
         self.random.shuffle(self.cards)
 

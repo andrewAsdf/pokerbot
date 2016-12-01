@@ -147,4 +147,17 @@ class OpponentModeller:
         if (self.models.get(player_name) is not None):
             return self.model_creator.use_model(self.models[player_name], feature_vec)
         else:
-            return None
+            return 0
+
+
+    def get_probabilities(self, game_state):
+        feature_vec = [f(game_state) for f in self.features]
+        player_name = game_state.table.current_seat.name
+
+        if (self.models.get(player_name) is None):
+            self.models[player_name] = self.db.get_player_model(player_name)
+
+        if (self.models.get(player_name) is not None):
+            return self.model_creator.use_model(self.models[player_name], feature_vec)
+        else:
+            return (0.1, 0.6, 0.3)
