@@ -34,6 +34,7 @@ class Controller:
 
         if type == 'board':
             self.game.table.board = event['cards']
+            self.game.next_stage()
         elif type == 'bet' or type == 'raise':
             self.game.bet()
         elif type == 'call' or type == 'check':

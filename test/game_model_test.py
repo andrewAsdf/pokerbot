@@ -121,7 +121,7 @@ class TestTable():
 class TestGameState:
 
     def setup_method(self):
-        self.game = GameState()
+        self.game = GameState(auto_stage = True)
         self.game.table[1] = Seat('Andy', 100)
         self.game.table[5] = Seat('Blaine', 100)
         self.game.table[8] = Seat('Carly', 100)

@@ -4,20 +4,36 @@ import logging
 
 logger = logging.getLogger('pokerbot.decision_maker')
 
+
+def get_reward(game_state, seat):
+    our_player = game_state.table[seat]
+
+    winners = game_state.get_winners()
+
+    if our_player in winners:
+        return game_state.pot / len(winners)
+    else:
+        return (our_player.chips_bet + our_player._total_chips_bet) * -1
+
+
 class TreeNode:
 
-    _actions = [-1, 0, 1]
-    _actions_noraise = [-1, 0]
+    _player_actions = [-1, 0, 1]
+    _player_actions_noraise = [-1, 0]
 
-    def __init__(self, game_state, our_seat):
+    def __init__(self, game_state, our_seat, random = Random()):
         self.parent = None
-        self.children = []
-        self._children_actions = []
+        self.children = [None, None, None]
         self.visits = 1
         self.reward = 0
 
+        self.random = random
         self.state = game_state.copy()
         self.our_seat = our_seat
+
+
+    def copy(self):
+        return TreeNode(self.state, self.our_seat, self.random)
 
 
     def perform(self, action_int):
@@ -32,38 +48,58 @@ class TreeNode:
 
 
     def get_reward(self):
-        if not self.state.is_over():
+        if not state.is_over():
             raise RuntimeError('Cannot get reward for running game!')
-
-        our_player = self.state.table[self.our_seat]
-
-        winners = self.state.get_winners()
-
-        if our_player in winners:
-            return self.state.pot / len(winners)
-        else:
-            return (our_player.chips_bet + our_player._total_chips_bet) * -1
+        return get_reward(self.state, self.our_seat)
 
 
     @property
     def actions(self):
         if self.state.possible_to_raise():
-            return self._actions
+            return self._player_actions
         else:
-            return self._actions_noraise
+            return self._player_actions_noraise
 
 
-    def copy(self):
-        return TreeNode(self.state, self.our_seat)
+    def get_player_move_node(self):
+        best_child = max(self.children, key = _node_UCT)
+        if best_child is not None:
+            return (best_child, False)
+        else:
+            return (_create_child(self.children.index(None)), True)
 
 
-    def create_child(self, action_int):
-        new_node = TreeNode(self.state, self.our_seat)
+    def get_opponent_move_node(self, probabilities):
+        index = next(p for p in probabilities if random.random() < p)
+
+        if self.children[index] is not None:
+            return (self.children[index], False)
+        else:
+            return (_create_child(index), True)
+
+
+    def _create_child(self, index):
+        self.children[index] = self.copy()
+        self.children[index].perform(index - 1)
+
+        if self.state.stage_over():
+            self.children[index] = CardNode()
+
         new_node.parent = self
         new_node.perform(action_int)
         self.children.append(new_node)
         self._children_actions.append(action_int)
+
         return new_node
+
+
+    def _node_UCT(node):
+        if Node is none:
+            return 1.41 * math.sqrt(math.log(self.visits))
+        else:
+            n = node.visits
+            r = node.reward
+            return r / n + 1.41 * math.sqrt(math.log(self.visits) / n)
 
 
     def our_turn(self):
@@ -74,17 +110,49 @@ class TreeNode:
         return self.state.is_over()
 
 
-    def get_best_action(self):
-        best_child =  max(self.children, key = lambda c: c.reward / c.visits)
-        return next(action for action, node in
-                zip(self._children_actions, self.children) if node == best_child)
+    def stage_over(self):
+        return self.state.stage_over()
 
 
-def _node_UCT(node):
-    n = node.visits
-    r = node.reward
-    t = node.parent.visits
-    return r / n + 1.41 * math.sqrt(math.log(t) / n)
+    def _child_value(self, node):
+        if node is not None:
+            return node.reward / node.visits
+        else:
+            return 1
+
+
+    def get_best_action(self, key = self.child_value):
+        best_child = max(self.children, key)
+        index = self.children.index(best_child) + 1
+        return _index_to_action(index)
+
+
+    def _index_to_action(self, index):
+        return index + 1
+
+
+
+class CardNode(TreeNode):
+
+    def __init__(self, node):
+        super.__init__(node.state, node.our_seat, node.random)
+        self.children = {}
+
+
+    def get_player_move_node(self):
+        return self.get_node()
+
+
+    def get_opponent_move_node(self):
+        return self.get_node()
+
+
+    def get_node(self):
+        new_node = self.copy()
+        new_node.card_provider.shuffle()
+        new_node.state.next_stage()
+        board = new_node.state.table.board
+        children(frozenset(board) : new_node)
 
 
 class MCTSDecisionMaker:
@@ -108,35 +176,29 @@ class MCTSDecisionMaker:
         for i in range(max_iter):
             if not (i + 1) % 500:
                 logger.info('MCTS iteration: {}'.format(i + 1))
-            selected_node = self._select(self.root)
-            expanded_node = self._expand(selected_node)
-            reward = self._simulate(expanded_node)
-            self._backpropagate(expanded_node, reward)
+            self._do_iteration(self.root)
 
         action = self.root.get_best_action()
         logger.info('Chosen action: {}'.format(action))
         return action
 
 
-    def _select(self, node, strategy = _node_UCT):
-        selected_node = node
-        while selected_node.children:
-            if len(selected_node.children) == 1:
-                selected_node = selected_node.children[0]
+    def _do_iteration(self, root):
+        node, is_new = root.get_action_child()
+
+        while not is_new:
+            if node.is_terminal():
+                node, is_new = (node, True) #quick solution for exiting loop
+            elif node.stage_over():
+                node, is_new = node.get_card_node()
+            elif node.our_turn():
+                node, is_new = node.get_player_move_node()
             else:
-                selected_node = max(selected_node.children, key = strategy)
+                node, is_new = node.get_opponent_move_node()
 
-        return selected_node
+        reward = self._simulate(node)
 
-
-    def _expand(self, node):
-        if (node.is_terminal()):
-            return node
-
-        for action in node.actions:
-            node.create_child(action)
-
-        return self.random.choice(node.children)
+        self._backpropagate(node, reward)
 
 
     def _simulate(self, node):

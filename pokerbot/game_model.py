@@ -150,7 +150,7 @@ class GameState:
 
     evaluator = Evaluator()
 
-    def __init__ (self, big_blind = 1, card_provider = None, auto_stage = True):
+    def __init__ (self, big_blind = 1, card_provider = None, auto_stage = False):
         self.card_provider = card_provider
         self.table = Table()
         self.stage = 0
