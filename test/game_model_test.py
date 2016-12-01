@@ -227,6 +227,25 @@ class TestGameState:
         assert self.game.stage == 2
 
 
+    def test_stage_over_no_autostage(self):
+        assert not self.game.stage_over()
+        self.game.auto_stage = False
+        self.game.call() #Andy
+        self.game.fold() #Blaine
+        self.game.call() #Carly
+        assert self.game.stage_over()
+        self.game._next_stage()
+        assert not self.game.stage_over()
+
+
+    def test_stage_over(self):
+        assert not self.game.stage_over()
+        self.game.call() #Andy
+        self.game.fold() #Blaine
+        self.game.call() #Carly
+        assert not self.game.stage_over()
+
+
     def test_turn_and_river_bet(self):
         assert self.game.table.current_seat.name == 'Andy'
         self.game.call() #Andy
@@ -304,6 +323,7 @@ class TestGameState:
 
     def test_card_provider(self):
         self.game.card_provider = MockCardProvider()
+        self.game.auto_deal = True
         self.game.new_game()
 
         assert self.game.table[1].hand == ['2s', '3s']

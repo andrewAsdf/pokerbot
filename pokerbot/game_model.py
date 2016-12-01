@@ -150,8 +150,7 @@ class GameState:
 
     evaluator = Evaluator()
 
-    def __init__ (self, big_blind = 1, card_provider = None, auto_stage = False):
-        self.card_provider = card_provider
+    def __init__ (self, big_blind = 1, auto_deal = False, auto_stage = False):
         self.table = Table()
         self.stage = 0
         self._pot_previous_rounds = 0
@@ -159,6 +158,9 @@ class GameState:
         self.big_blind = big_blind
         self.bet_count = 0
         self.auto_stage = auto_stage
+        self.auto_deal = auto_deal
+        self._stage_over = False
+        self.card_provider = None
 
 
     def copy(self):
@@ -197,11 +199,15 @@ class GameState:
 
         self.table.next_seat()
 
+        if self.table.current_index == self.table.stop_index:
+            self._stage_over = True
+
         if self.auto_stage and self.stage_over():
             self._next_stage()
 
         if self.table.stop_index == folding_player_index:
             self.table.stop_index = self.table.next_index(folding_player_index)
+
             #if a player folds when first, next_index won't find it later so
             #stage would never end
 
@@ -213,6 +219,9 @@ class GameState:
             self._call(player)
 
         self.table.next_seat()
+
+        if self.table.current_index == self.table.stop_index:
+            self._stage_over = True
 
         if self.auto_stage and self.stage_over():
             self._next_stage()
@@ -233,13 +242,14 @@ class GameState:
     def new_game(self, start_from = None):
         self.table.new_game(start_from)
 
-        if self.card_provider is not None:
+        if self.auto_deal:
             [p.set_hand(self.card_provider.get_hand())
                     for p in self.table.seats if p.active]
 
         self.to_call = self.big_blind
         self._pot_previous_rounds = 0
         self._postBlinds()
+        self._stage_over = False
 
 
     def possible_to_raise(self):
@@ -259,19 +269,24 @@ class GameState:
     def _next_stage(self):
         self.stage += 1
         self.to_call = 0
+        self._stage_over = False
 
         self._pot_previous_rounds += self._current_round_pot
         [s.clear_bets() for s in self.table.seats]
 
-        if self.card_provider is not None:
-            if self.stage == 1:
-                self.table.board = self.card_provider.get_flop()
-            elif self.stage == 2:
-                self.table.board.append(self.card_provider.get_turn())
-            elif self.stage == 3:
-                self.table.board.append(self.card_provider.get_river())
+        if self.auto_deal:
+            self.deal_board()
 
         self.table.next_stage()
+
+
+    def deal_board(self):
+        if self.stage == 1:
+            self.table.board = self.card_provider.get_flop()
+        elif self.stage == 2:
+            self.table.board.append(self.card_provider.get_turn())
+        elif self.stage == 3:
+            self.table.board.append(self.card_provider.get_river())
 
 
     def _postBlinds(self): #TODO - for 2 players
@@ -281,12 +296,11 @@ class GameState:
 
 
     def stage_over(self):
-        return self.table.current_index == self.table.stop_index
+        return self._stage_over
 
 
     def is_over(self):
         return self.table.active_player_count == 1 or self.stage == 4
-        #stage will be incremented after river, so we check that
 
 
     def _evaluate_hand(self, ascii_cards):
@@ -300,9 +314,6 @@ class GameState:
 
         if len(active) == 1:
             return [active.pop()]
-
-        if any(not p.hand for p in self.table.seats if p.active):
-            [p.set_hand([]) for p in self.table.seats if (not p.hand) and p.active]
 
         hand_ranks = {p : self._evaluate_hand(p.hand + self.table.board) for p in active}
         winner_rank = min(hand_ranks.values()) #deuces uses small ranks for good hands

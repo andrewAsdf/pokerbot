@@ -87,7 +87,7 @@ class MCTSDecisionMaker:
     def _get_probabilities(self, node):
         probabilities = self.opponent_modeller.get_probabilities(node.state)
         if len(node.actions) == 2: #when raise is not available
-            probabilities[2] == 0
+            probabilities[2] = 0
         return probabilities
 
 
@@ -126,13 +126,13 @@ class TreeNode:
 
 
     def get_reward(self):
-        if not state.is_over():
+        if not self.state.is_over():
             raise RuntimeError('Cannot get reward for running game!')
         return get_reward(self.state, self.our_seat)
 
 
-    def _node_UCT(node):
-        if Node is none:
+    def _node_UCT(self, node):
+        if node is None:
             return 1.41 * math.sqrt(math.log(self.visits))
         else:
             n = node.visits
@@ -168,14 +168,17 @@ class PlayerNode(TreeNode):
     _player_actions = [-1, 0, 1]
     _player_actions_noraise = [-1, 0]
 
-    self.children = [None, None, None]
+
+    def __init__(self, game_state, our_seat):
+        self.children = [None, None, None]
+        super.__init__(game_state, our_seat) 
 
 
     def _create_child(self, index):
         new_node = _create_new_node(self)
         new_node.parent = self
         self.children[index] = new_node
-        new_node.perform(_index_to_action(index))
+        new_node.perform(self._index_to_action(index))
         return new_node
 
 
@@ -187,13 +190,14 @@ class PlayerNode(TreeNode):
             return self._player_actions_noraise
 
 
-    def get_best_action(self, key = self._child_value):
+    def get_best_action(self, key = PlayerNode._child_value):
         best_child = max(self.children, key=key)
         index = self.children.index(best_child)
-        return _index_to_action(index)
+        return self._index_to_action(index)
 
 
-    def _child_value(self, node):
+    @staticmethod
+    def _child_value(node):
         if node is not None:
             return node.reward / node.visits
         else:
@@ -207,7 +211,7 @@ class PlayerNode(TreeNode):
 class BotNode(PlayerNode):
 
     def get_child(self, probabilities = None):
-        best_child = max(self.children, key = _node_UCT)
+        best_child = max(self.children, key = self._node_UCT)
         if best_child is not None:
             return (best_child, False)
         else:
@@ -217,7 +221,7 @@ class BotNode(PlayerNode):
 class OpponentNode(PlayerNode):
 
     def get_child(self, probabilities):
-        np_rand.choice(range(0,3), p=probabilities)
+        index = np_rand.choice(range(0,3), p=probabilities)
 
         if self.children[index] is not None:
             return (self.children[index], False)
@@ -228,7 +232,9 @@ class OpponentNode(PlayerNode):
 #TODO: when stage is over but game is not over, avoid generating extra cardnodes
 class CardNode(TreeNode):
 
-    self.children = {}
+    def __init__(self, game_state, our_seat):
+        self.children = {}
+        super.__init__(game_state, our_seat) 
 
     def get_child(self, probabilities = None):
         card_provider = self.state.card_provider.copy()
@@ -237,7 +243,7 @@ class CardNode(TreeNode):
         index = None
         if self.state.stage == 0:
             index = get_cards_id(card_provider.peek_cards(3))
-        else
+        else:
             index = get_cards_id(card_provider.peek_cards(1))
 
         if self.children.get(index) is None:
