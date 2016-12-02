@@ -203,7 +203,7 @@ class GameState:
             self._stage_over = True
 
         if self.auto_stage and self.stage_over():
-            self._next_stage()
+            self.next_stage()
 
         if self.table.stop_index == folding_player_index:
             self.table.stop_index = self.table.next_index(folding_player_index)
@@ -224,7 +224,7 @@ class GameState:
             self._stage_over = True
 
         if self.auto_stage and self.stage_over():
-            self._next_stage()
+            self.next_stage()
 
 
     def bet(self):
@@ -266,7 +266,7 @@ class GameState:
         self.to_call += bet
 
 
-    def _next_stage(self):
+    def next_stage(self):
         self.stage += 1
         self.to_call = 0
         self._stage_over = False
@@ -300,7 +300,10 @@ class GameState:
 
 
     def is_over(self):
-        return self.table.active_player_count == 1 or self.stage == 4
+        return self.table.active_player_count == 1\
+               or self.stage == 3 and self.stage_over\
+               or self.stage == 4
+        #this way it will work with, and without auto_stage TODO: fix this though
 
 
     def _evaluate_hand(self, ascii_cards):

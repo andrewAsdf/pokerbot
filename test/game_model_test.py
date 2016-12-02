@@ -234,7 +234,7 @@ class TestGameState:
         self.game.fold() #Blaine
         self.game.call() #Carly
         assert self.game.stage_over()
-        self.game._next_stage()
+        self.game.next_stage()
         assert not self.game.stage_over()
 
 
@@ -288,6 +288,29 @@ class TestGameState:
 
         assert self.game.is_over()
 
+
+    def test_game_over_no_autostage(self):
+        self.game.auto_stage = False
+        self.game.call() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.next_stage()
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+        self.game.next_stage()
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+        self.game.next_stage()
+
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+        assert self.game.is_over()
+        
 
     def test_game_over_fold(self):
         self.game.fold() #Andy

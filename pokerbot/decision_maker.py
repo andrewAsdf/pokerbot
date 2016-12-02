@@ -21,6 +21,9 @@ class MCTSDecisionMaker:
         logger.info('Getting decision for player {}'
                 .format(game_state.table.current_seat.name))
 
+        names = (s.name for s in game_state.table.seats if s.active)
+        self.vpips = self._get_player_vpips(names)
+
         our_seat = game_state.table.current_index
         self.root = BotNode(game_state, our_seat)
 
@@ -47,16 +50,22 @@ class MCTSDecisionMaker:
     def _get_new_node(self, root):
         node, is_new = root.get_child()
 
-        while not (is_new or node.is_terminal):
-            node, is_new = node.get_child(self.opponent_modeller.get_probabilities())
+        while not (is_new or node.is_terminal()):
+            node, is_new = node.get_child(self.opponent_modeller.get_probabilities(node.state))
 
         return node
 
 
     def _simulate(self, node):
-        simulation_node = node.copy()
+        if type(node) is CardNode:
+            logger.warning("Simulation got a CardNode!")
+        simulation_node = PlayerNode(node.state, node.our_seat)
         simulation_node.state.auto_stage = True
+        simulation_node.state.auto_deal = True
         simulation_node.state.card_provider.shuffle()
+
+        if simulation_node.state.stage_over():
+            simulation_node.state.next_stage()
 
         while not simulation_node.is_terminal():
             if simulation_node.our_turn():
@@ -65,6 +74,8 @@ class MCTSDecisionMaker:
             else:
                 prediction = self._get_prediction(simulation_node)
                 simulation_node.perform(prediction)
+
+        self._fill_player_cards(simulation_node)
 
         return simulation_node.get_reward()
 
@@ -93,11 +104,23 @@ class MCTSDecisionMaker:
 
     def _assign_card_provider(self, node):
         self.card_provider.reset()
+        self.card_provider.shuffle()
         our_cards = node.state.table[node.our_seat].hand
         board_cards = node.state.table.board
         self.card_provider.remove_cards(our_cards + board_cards)
-        node.state.card_provider = self.card_provider
+        node.state.card_provider = self.card_provider.copy()
 
+
+    def _fill_player_cards(self, node):
+        seats = node.state.table.seats
+        for seat in (s for s in seats if s.active):
+            vpip = 1 if self.vpips[seat.name] else self.vpips[seat.name]
+            hand = node.state.card_provider.get_hand(vpip = vpip)
+            seat.hand = hand
+
+
+    def _get_player_vpips(self, player_names):
+        return {p : self.db.get_player_stat(p, 'vpip') for p in player_names}
 
 class TreeNode:
 
@@ -119,10 +142,6 @@ class TreeNode:
             self.state.fold()
         else:
             raise RuntimeError('Invalid action to perform!')
-
-
-    def copy(self):
-        return TreeNode(self.state, self.our_seat)
 
 
     def get_reward(self):
@@ -152,35 +171,8 @@ class TreeNode:
         return self.state.stage_over()
 
 
-def _create_new_node(node):
-    '''Create a new node using the state found in node.'''
-
-    if node.stage_over():
-        return CardNode(node.state, node.our_seat)
-    elif not node.our_turn():
-        return OpponentNode(node.state, node.our_seat)
-    else:
-        return PlayerNode(node.state, node.our_seat)
-
-
-class PlayerNode(TreeNode):
-
     _player_actions = [-1, 0, 1]
     _player_actions_noraise = [-1, 0]
-
-
-    def __init__(self, game_state, our_seat):
-        self.children = [None, None, None]
-        super.__init__(game_state, our_seat) 
-
-
-    def _create_child(self, index):
-        new_node = _create_new_node(self)
-        new_node.parent = self
-        self.children[index] = new_node
-        new_node.perform(self._index_to_action(index))
-        return new_node
-
 
     @property
     def actions(self):
@@ -190,18 +182,45 @@ class PlayerNode(TreeNode):
             return self._player_actions_noraise
 
 
-    def get_best_action(self, key = PlayerNode._child_value):
+def _create_new_node(node):
+    '''Create a new node using the state found in node.'''
+
+    if node.stage_over():
+        return CardNode(node.state, node.our_seat)
+    elif node.our_turn():
+        return BotNode(node.state, node.our_seat)
+    else:
+        return OpponentNode(node.state, node.our_seat)
+
+
+def _child_value(node):
+    if node is not None:
+        return node.reward / node.visits
+    else:
+        return 0
+
+
+class PlayerNode(TreeNode):
+
+
+    def __init__(self, game_state, our_seat):
+        self.children = [None, None, None]
+        super().__init__(game_state, our_seat)
+
+
+    def _create_child(self, index):
+        new_node = _create_new_node(self)
+        new_node.parent = self
+        self.children[index] = new_node
+        if not new_node.state.stage_over(): #for card nodes
+            new_node.perform(self._index_to_action(index))
+        return new_node
+
+
+    def get_best_action(self, key = _child_value):
         best_child = max(self.children, key=key)
         index = self.children.index(best_child)
         return self._index_to_action(index)
-
-
-    @staticmethod
-    def _child_value(node):
-        if node is not None:
-            return node.reward / node.visits
-        else:
-            return 0
 
 
     def _index_to_action(self, index):
@@ -229,12 +248,11 @@ class OpponentNode(PlayerNode):
             return (self._create_child(index), True)
 
 
-#TODO: when stage is over but game is not over, avoid generating extra cardnodes
 class CardNode(TreeNode):
 
     def __init__(self, game_state, our_seat):
         self.children = {}
-        super.__init__(game_state, our_seat) 
+        super().__init__(game_state, our_seat)
 
     def get_child(self, probabilities = None):
         card_provider = self.state.card_provider.copy()
@@ -247,12 +265,12 @@ class CardNode(TreeNode):
             index = get_cards_id(card_provider.peek_cards(1))
 
         if self.children.get(index) is None:
-            new_node = _create_new_node(self) 
+            new_node = _create_new_node(self)
             new_node.state.card_provider = card_provider
             new_node.state.next_stage()
             new_node.state.deal_board()
             self.children[index] = new_node
-            return (new_node, True)
+            return (new_node, False) #CardNode won't be returned as new node
         else:
             return (self.children[index], False)
 

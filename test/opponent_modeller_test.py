@@ -269,7 +269,7 @@ class TestOpponentModeller:
         table_data = test_game['table']
         game = self.opp_mod.create_game_state(table_data, button)
 
-        assert self.opp_mod.get_prediction(game) == None
+        assert self.opp_mod.get_prediction(game) == 0
 
         self.opp_mod.process_games()
 

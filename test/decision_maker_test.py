@@ -1,5 +1,8 @@
 from pokerbot.decision_maker import MCTSDecisionMaker
 from pokerbot.decision_maker import TreeNode
+from pokerbot.decision_maker import CardNode
+from pokerbot.decision_maker import BotNode
+from pokerbot.decision_maker import OpponentNode
 from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
 from random import Random
@@ -34,19 +37,20 @@ class MockDB:
 
     def get_player_stat(self, name, stat):
         if stat == 'vpip':
-            return self.vpips['name']
+            return self.vpips[name]
         else:
             raise RuntimeError('Stat name should be "vpip"')
 
 
 class MockCardProvider:
 
-    def __init__(self, seed = 420):
+    def __init__(self, seed = 420, no_shuffle = False):
         self.random = Random(seed)
+        self.no_shuffle = no_shuffle
         self.reset()
 
 
-    def get_hand(self):
+    def get_hand(self, vpip = 1):
         return [self.cards.pop(), self.cards.pop()]
 
 
@@ -62,12 +66,13 @@ class MockCardProvider:
         return self.cards.pop()
 
 
-    def peek_cards(number):
+    def peek_cards(self, number):
         return self.cards[-number:]
 
 
     def shuffle(self):
-        self.random.shuffle(self.cards)
+        if not self.no_shuffle:
+            self.random.shuffle(self.cards)
 
 
     def reset(self):
@@ -76,7 +81,6 @@ class MockCardProvider:
             '9c', 'Tc', 'Jc', 'Qc', 'Kc', 'Ac', '2s', '3s', '4s', '5s', '6s',
             '7s', '8s', '9s', 'Ts', 'Js', 'Qs', 'Ks', 'As', '2h', '3h', '4h',
             '5h', '6h', '7h', '8h', '9h', 'Th', 'Jh', 'Qh', 'Kh', 'Ah' ]
-        self.shuffle()
 
 
     def remove_cards(self, removed_cards):
@@ -101,6 +105,18 @@ class MockOpponentModeller:
             return self.random.choice([0, 1])
         elif name == 'Carly':
             return self.random.choice([-1, 0, 1])
+        else:
+            raise RuntimeError()
+
+    def get_probabilities(self, game_state):
+        name = game_state.table.current_seat.name
+
+        if name == 'Blaine':
+            return [0, 0.5, 0.5]
+        elif name == 'Carly':
+            return [0.1, 0.7, 0.2]
+        else:
+            return None #it is called for every player, but discarded for our own player
 
 
 class TestDecisionMaker:
@@ -115,20 +131,50 @@ class TestDecisionMaker:
         self.game.new_game(0)
 
 
-    def test_get_best_action(self):
-        self.root = TreeNode(self.game, 0)
-        child1 = self.root.create_child(-1)
-        child1.reward = 3
-        child2 = self.root.create_child(0)
-        child2.reward = 2
-        child3 = self.root.create_child(1)
-        child3.reward = 1
+    def test_card_node(self):
+        self.game.card_provider = MockCardProvider(no_shuffle = True)
+        self.game.call()
+        self.game.call()
+        self.game.call()
+        card_node = CardNode(self.game, 0)
+        child_node, is_new  = card_node.get_child()
 
-        assert self.root.get_best_action() == -1
+        assert is_new
+        assert child_node.state.table.board == ['Ah', 'Kh', 'Qh']
+
+        _, is_new  = card_node.get_child()
+        assert child_node == card_node.get_child()[0]
+        assert not is_new
+        #it should return the same node
+
+
+    def test_bot_node(self):
+        self.game.card_provider = MockCardProvider(no_shuffle = True)
+        bot_node = BotNode(self.game, 0) 
+        child_node, is_new  = bot_node.get_child()
+
+        assert is_new
+        bot_node.children.index(child_node)
+
+        _, is_new  = bot_node.get_child()
+        assert child_node == bot_node.get_child()[0]
+        assert not is_new
+
+
+    def test_opponent_node(self):
+        self.game.card_provider = MockCardProvider(no_shuffle = True)
+        player_node = OpponentNode(self.game, 0) 
+        child_node, is_new  = player_node.get_child([0.3,0.3,0.4])
+
+        assert is_new
+        player_node.children.index(child_node)
+
+        _, is_new  = player_node.get_child([0.3,0.3,0.4])
+        assert not is_new
 
 
     def test_get_action(self):
-        self.decision_maker.get_action(self.game)
+        self.decision_maker.get_action(self.game, max_iter = 100)
 
 
 
@@ -143,13 +189,17 @@ def get_graph(root, graph):
 
         if node.parent is not None:
             graph.edge(str(hash(node.parent)), str(hash(node)))
-            action_index = node.parent.children.index(node)
-            action = str(node.parent._children_actions[action_index])
+
+        if type(node) is OpponentNode or type(node) is BotNode:
+            [nodes.append(c) for c in node.children if c is not None]
+            if node.parent is not None:
+                action = node.parent.children.index(node) - 1
+        elif type(node) is CardNode:
+            #action = next(str(cards) for cards, n in node.children.items() if n is node)
+            [nodes.append(c) for c in node.children.values()]
 
         graph.node(str(hash(node)), 'r: {}, v: {} p: {}, a: {}, s: {}'.format(node.reward,
             node.visits, node.state.table.current_seat.name, action, node.state.stage))
-
-        [nodes.append(c) for c in node.children]
 
 
 if __name__ == '__main__':
