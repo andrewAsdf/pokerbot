@@ -5,7 +5,6 @@ import logging
 
 logger = logging.getLogger('pokerbot.decision_maker')
 
-
 class MCTSDecisionMaker:
 
     def __init__(self, opponent_modeller, db, card_provider, pseudo_random = False):
@@ -17,23 +16,19 @@ class MCTSDecisionMaker:
 
 
     def get_action(self, game_state, max_iter=2000):
+        assert game_state.auto_stage == False
         logger.info('MCTS iteration count: {}'.format(max_iter))
-        logger.info('Getting decision for player {}'
-                .format(game_state.table.current_seat.name))
 
         names = (s.name for s in game_state.table.seats if s.active)
         self.vpips = self._get_player_vpips(names)
 
         our_seat = game_state.table.current_index
         self.root = BotNode(game_state, our_seat)
-
-        assert self.root.state.auto_stage == False
         self._assign_card_provider(self.root)
 
         for i in range(max_iter):
             if not (i + 1) % 500:
                 logger.info('MCTS iteration: {}'.format(i + 1))
-
             self._do_iteration(self.root)
 
         action = self.root.get_best_action()
@@ -50,24 +45,22 @@ class MCTSDecisionMaker:
     def _get_new_node(self, root):
         node, is_new = root.get_child()
 
-        while not (is_new or node.is_terminal()):
+        while not is_new and not node.has_reward():
             node, is_new = node.get_child(self.opponent_modeller.get_probabilities(node.state))
 
         return node
 
 
     def _simulate(self, node):
-        if type(node) is CardNode:
-            logger.warning("Simulation got a CardNode!")
-        simulation_node = PlayerNode(node.state, node.our_seat)
-        simulation_node.state.auto_stage = True
+        simulation_node = PlayerNode(node.state, node.our_seat) #card nodes would behave
+        simulation_node.state.auto_stage = True                 #differently
         simulation_node.state.auto_deal = True
         simulation_node.state.card_provider.shuffle()
 
         if simulation_node.state.stage_over():
             simulation_node.state.next_stage()
 
-        while not simulation_node.is_terminal():
+        while not simulation_node.has_reward():
             if simulation_node.our_turn():
                 choice = np_rand.choice(simulation_node.actions) #TODO: apply an OM instead
                 simulation_node.perform(choice)
@@ -113,7 +106,7 @@ class MCTSDecisionMaker:
 
     def _fill_player_cards(self, node):
         seats = node.state.table.seats
-        for seat in (s for s in seats if s.active):
+        for seat in (s for i, s in enumerate(seats) if s.active and i != node.our_seat):
             vpip = 1 if self.vpips[seat.name] else self.vpips[seat.name]
             hand = node.state.card_provider.get_hand(vpip = vpip)
             seat.hand = hand
@@ -145,8 +138,8 @@ class TreeNode:
 
 
     def get_reward(self):
-        if not self.state.is_over():
-            raise RuntimeError('Cannot get reward for running game!')
+        if not self.has_reward():
+            raise RuntimeError('Cannot get reward yet!')
         return get_reward(self.state, self.our_seat)
 
 
@@ -163,8 +156,8 @@ class TreeNode:
         return self.state.table.current_index == self.our_seat
 
 
-    def is_terminal(self):
-        return self.state.is_over()
+    def has_reward(self): #reward is known when we fold, even if game is going
+        return self.state.is_over() or not self.state.table[self.our_seat].active
 
 
     def stage_over(self):
@@ -202,7 +195,6 @@ def _child_value(node):
 
 class PlayerNode(TreeNode):
 
-
     def __init__(self, game_state, our_seat):
         self.children = [None, None, None]
         super().__init__(game_state, our_seat)
@@ -212,8 +204,7 @@ class PlayerNode(TreeNode):
         new_node = _create_new_node(self)
         new_node.parent = self
         self.children[index] = new_node
-        if not new_node.state.stage_over(): #for card nodes
-            new_node.perform(self._index_to_action(index))
+        new_node.perform(self._index_to_action(index))
         return new_node
 
 
@@ -230,6 +221,7 @@ class PlayerNode(TreeNode):
 class BotNode(PlayerNode):
 
     def get_child(self, probabilities = None):
+        assert not self.state.stage_over()
         best_child = max(self.children, key = self._node_UCT)
         if best_child is not None:
             return (best_child, False)
@@ -240,6 +232,7 @@ class BotNode(PlayerNode):
 class OpponentNode(PlayerNode):
 
     def get_child(self, probabilities):
+        assert not self.state.stage_over()
         index = np_rand.choice(range(0,3), p=probabilities)
 
         if self.children[index] is not None:
@@ -255,6 +248,7 @@ class CardNode(TreeNode):
         super().__init__(game_state, our_seat)
 
     def get_child(self, probabilities = None):
+        assert self.state.stage_over()
         card_provider = self.state.card_provider.copy()
         card_provider.shuffle()
 
@@ -266,11 +260,12 @@ class CardNode(TreeNode):
 
         if self.children.get(index) is None:
             new_node = _create_new_node(self)
+            new_node.parent = self
             new_node.state.card_provider = card_provider
             new_node.state.next_stage()
             new_node.state.deal_board()
             self.children[index] = new_node
-            return (new_node, False) #CardNode won't be returned as new node
+            return (new_node, True)
         else:
             return (self.children[index], False)
 
@@ -286,6 +281,9 @@ class CardNode(TreeNode):
 
 def get_reward(game_state, seat):
     our_player = game_state.table[seat]
+
+    if not our_player.active:
+        return (our_player.chips_bet + our_player._total_chips_bet) * -1
 
     winners = game_state.get_winners()
 

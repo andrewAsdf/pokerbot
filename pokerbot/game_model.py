@@ -77,8 +77,7 @@ class Table:
     def next_index(self, seat_index, neighbor = 1):
         """Return the next active seat index given a seat number."""
 
-        if self.active_player_count == 0:
-            raise RuntimeError('Cannot get index for zero players!')
+        assert not self.active_player_count < 2, "Shouldn't call this for less than 2 players!"
 
         next_index = seat_index
 
@@ -105,6 +104,8 @@ class Table:
 
 
     def next_stage(self):
+        [s.clear_bets() for s in self.seats]
+
         self.current_index = self.next_index(self.button_index, 1)
         self.stop_index = self.next_index(self.button_index, 1)
 
@@ -192,27 +193,34 @@ class GameState:
 
 
     def fold(self):
-        player = self.table.current_seat
-        player.fold()
+        assert not self.stage_over(), 'Cannot perform action when stage over!'
+        assert not self.is_over(), 'Performing action when game over!'
+
+        self.table.current_seat.fold()
 
         folding_player_index = self.table.current_index
+
+        if self.table.active_player_count == 1:
+            return
 
         self.table.next_seat()
 
         if self.table.current_index == self.table.stop_index:
             self._stage_over = True
+            if self.auto_stage:
+                self.next_stage()
 
-        if self.auto_stage and self.stage_over():
-            self.next_stage()
-
-        if self.table.stop_index == folding_player_index:
+        elif folding_player_index == self.table.stop_index:
             self.table.stop_index = self.table.next_index(folding_player_index)
 
-            #if a player folds when first, next_index won't find it later so
-            #stage would never end
+        #if a player folds when first, next_index won't find it later so
+        #stage would never end
 
 
     def call(self):
+        assert not self.stage_over(), 'Cannot perform action when stage over!'
+        assert not self.is_over(), 'Performing action when game over!'
+
         player = self.table.current_seat
 
         if player.chips_bet < self.to_call:
@@ -222,12 +230,15 @@ class GameState:
 
         if self.table.current_index == self.table.stop_index:
             self._stage_over = True
-
-        if self.auto_stage and self.stage_over():
-            self.next_stage()
+            if self.auto_stage:
+                self.next_stage()
 
 
     def bet(self):
+        assert not self.stage_over(), 'Performing action when stage over!'
+        assert not self.is_over(), 'Performing action when game over!'
+        assert self.possible_to_raise(), 'Raising above limit!'
+
         player = self.table.current_seat
 
         if player.chips_bet < self.to_call:
@@ -264,15 +275,18 @@ class GameState:
     def _bet(self, player, bet):
         player.place_bet(bet)
         self.to_call += bet
+        self.bet_count += 1
 
 
     def next_stage(self):
+        assert self.stage_over()
+
         self.stage += 1
         self.to_call = 0
+        self.bet_count = 0
         self._stage_over = False
 
         self._pot_previous_rounds += self._current_round_pot
-        [s.clear_bets() for s in self.table.seats]
 
         if self.auto_deal:
             self.deal_board()
@@ -301,7 +315,7 @@ class GameState:
 
     def is_over(self):
         return self.table.active_player_count == 1\
-               or self.stage == 3 and self.stage_over\
+               or self.stage == 3 and self.stage_over()\
                or self.stage == 4
         #this way it will work with, and without auto_stage TODO: fix this though
 
@@ -311,12 +325,12 @@ class GameState:
 
 
     def get_winners(self):
-        '''Return array of winner(s) of the game. No checking is performed whether game\
-        is over.'''
+        '''Return array of winner(s) of the game.'''
+        assert self.is_over(), "Cannot get winners for running game!"
         active = self.table.active_players()
 
         if len(active) == 1:
-            return [active.pop()]
+            return active
 
         hand_ranks = {p : self._evaluate_hand(p.hand + self.table.board) for p in active}
         winner_rank = min(hand_ranks.values()) #deuces uses small ranks for good hands

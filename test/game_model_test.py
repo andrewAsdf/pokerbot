@@ -227,9 +227,9 @@ class TestGameState:
         assert self.game.stage == 2
 
 
-    def test_stage_over_no_autostage(self):
-        assert not self.game.stage_over()
+    def test_stage_over(self):
         self.game.auto_stage = False
+        assert not self.game.stage_over()
         self.game.call() #Andy
         self.game.fold() #Blaine
         self.game.call() #Carly
@@ -238,7 +238,30 @@ class TestGameState:
         assert not self.game.stage_over()
 
 
-    def test_stage_over(self):
+    def test_stage_over_bet(self):
+        self.game.auto_stage = False
+        assert not self.game.stage_over()
+        self.game.call() #Andy
+        self.game.bet() #Blaine
+        self.game.call() #Carly
+        self.game.call() #Andy
+        assert self.game.stage_over()
+
+
+    def test_stage_over_bet_new_stage(self):
+        self.game.auto_stage = False
+        assert not self.game.stage_over()
+        self.game.fold() #Andy
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        assert self.game.stage_over()
+        self.game.next_stage()
+        self.game.call() #Blaine
+        self.game.call() #Carly
+        assert self.game.stage_over()
+
+
+    def test_stage_over_autostage(self):
         assert not self.game.stage_over()
         self.game.call() #Andy
         self.game.fold() #Blaine
@@ -310,7 +333,7 @@ class TestGameState:
         self.game.call() #Carly
         self.game.call() #Andy
         assert self.game.is_over()
-        
+
 
     def test_game_over_fold(self):
         self.game.fold() #Andy
@@ -378,5 +401,21 @@ class TestGameState:
         self.game.table[1].hand = ['2s', '3s']
         self.game.table[5].hand = ['4s', '5s']
         self.game.table[8].hand = ['6s', '7s']
+
+        self.game.call()
+        self.game.call()
+        self.game.call()
+
+        self.game.call()
+        self.game.call()
+        self.game.call()
+
+        self.game.call()
+        self.game.call()
+        self.game.call()
+
+        self.game.call()
+        self.game.call()
+        self.game.call()
 
         assert self.game.get_winners() == [self.game.table[8]]

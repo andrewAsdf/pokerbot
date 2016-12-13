@@ -150,7 +150,7 @@ class TestDecisionMaker:
 
     def test_bot_node(self):
         self.game.card_provider = MockCardProvider(no_shuffle = True)
-        bot_node = BotNode(self.game, 0) 
+        bot_node = BotNode(self.game, 0)
         child_node, is_new  = bot_node.get_child()
 
         assert is_new
@@ -163,7 +163,7 @@ class TestDecisionMaker:
 
     def test_opponent_node(self):
         self.game.card_provider = MockCardProvider(no_shuffle = True)
-        player_node = OpponentNode(self.game, 0) 
+        player_node = OpponentNode(self.game, 0)
         child_node, is_new  = player_node.get_child([0.3,0.3,0.4])
 
         assert is_new
@@ -174,8 +174,16 @@ class TestDecisionMaker:
 
 
     def test_get_action(self):
-        self.decision_maker.get_action(self.game, max_iter = 100)
+        self.decision_maker.get_action(self.game, max_iter = 200)
 
+
+
+def make_node(node, graph, action):
+    node_label = 'r: {}, v: {} p: {}, a: {}, s: {}'
+    formatted_label = node_label.format(node.reward, node.visits,
+            node.state.table.current_seat.name, action, node.state.stage)
+
+    graph.node(str(hash(node)), formatted_label)
 
 
 def get_graph(root, graph):
@@ -185,21 +193,18 @@ def get_graph(root, graph):
     while nodes:
         node = nodes.popleft()
 
-        action = 'x'
+        if type(node.children) is list:
+            for i, child_node in enumerate(node.children):
+                if child_node is not None:
+                    nodes.append(child_node)
+                    make_node(child_node, graph, i - 1)
+                    graph.edge(str(hash(node)), str(hash(child_node)))
 
-        if node.parent is not None:
-            graph.edge(str(hash(node.parent)), str(hash(node)))
-
-        if type(node) is OpponentNode or type(node) is BotNode:
-            [nodes.append(c) for c in node.children if c is not None]
-            if node.parent is not None:
-                action = node.parent.children.index(node) - 1
-        elif type(node) is CardNode:
-            #action = next(str(cards) for cards, n in node.children.items() if n is node)
-            [nodes.append(c) for c in node.children.values()]
-
-        graph.node(str(hash(node)), 'r: {}, v: {} p: {}, a: {}, s: {}'.format(node.reward,
-            node.visits, node.state.table.current_seat.name, action, node.state.stage))
+        elif type(node.children) is dict:
+            for i, child_node in node.children.items():
+                nodes.append(child_node)
+                make_node(child_node, graph, i)
+                graph.edge(str(hash(node)), str(hash(child_node)))
 
 
 if __name__ == '__main__':
