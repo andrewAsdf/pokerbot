@@ -138,7 +138,7 @@ class TestDecisionMaker:
         self.game.call()
         self.game.call()
 
-        self.game.board = ['4s', 'Tc', '9c']
+        self.game.table.board = ['4s', 'Tc', '9c']
 
         self.game.call()
         self.game.call()
@@ -155,7 +155,7 @@ class TestDecisionMaker:
         self.game.call()
         self.game.call()
 
-        self.game.board = ['4s', 'Tc', '9c', 'Qs']
+        self.game.table.board = ['4s', 'Tc', '9c', 'Qs']
 
         self.game.call()
         self.game.call()
@@ -176,7 +176,7 @@ class TestDecisionMaker:
         self.game.call()
         self.game.call()
 
-        self.game.board = ['4s', 'Tc', '9c', 'Qs', '5s']
+        self.game.table.board = ['4s', 'Tc', '9c', 'Qs', '5s']
 
         self.game.call()
         self.game.call()
@@ -219,7 +219,7 @@ def get_graph(root, graph):
 if __name__ == '__main__':
     test = TestDecisionMaker()
     test.setup_method()
-    test.test_get_action()
+    test.test_get_action_river()
 
     graph = Digraph()
     graphviz_graph = get_graph(test.decision_maker.root, graph)

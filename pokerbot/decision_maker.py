@@ -90,17 +90,6 @@ class MCTSDecisionMaker:
         return probabilities
 
 
-    def _assign_card_provider(self, node):
-        self.card_provider.reset()
-        self.card_provider.shuffle()
-
-        our_cards = node.state.table[node.our_seat].hand
-        board_cards = node.state.table.board
-
-        self.card_provider.remove_cards(our_cards + board_cards)
-        node.state.card_provider = self.card_provider.copy()
-
-
     def _fill_player_cards(self, node):
         seats = node.state.table.seats
         for seat in (s for i, s in enumerate(seats) if s.active and i != node.our_seat):
@@ -119,6 +108,17 @@ class MCTSDecisionMaker:
         root.visits = 1
         self._assign_card_provider(root)
         return root
+
+
+    def _assign_card_provider(self, node):
+        self.card_provider.reset()
+        self.card_provider.shuffle()
+
+        our_cards = node.state.table[node.our_seat].hand
+        board_cards = node.state.table.board
+
+        self.card_provider.remove_cards(our_cards + board_cards)
+        node.state.card_provider = self.card_provider.copy()
 
 
 class TreeNode:

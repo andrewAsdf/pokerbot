@@ -61,18 +61,18 @@ class Table:
 
     @property
     def board(self):
-        return self._board 
+        return self._board
 
 
     @board.setter
     def board(self, board):
-        assert len(self._board) < len(board), "Trying to assign a smaller board"
+        assert len(self._board) <= len(board), "Trying to assign a smaller board"
         self._board = board
 
 
     def copy(self):
         new_table = copy(self)
-        new_table._board = copy(self.board)
+        new_table.board = copy(self.board)
         new_table.seats = [copy(s) for s in self.seats]
         return new_table
 
@@ -111,7 +111,7 @@ class Table:
             raise RuntimeError('Invalid starting seat!')
 
         self._board = []
-    
+
         self.current_index = self.next_index(self.button_index, 3)
         self.stop_index = self.next_index(self.button_index, 3)
 
@@ -334,6 +334,7 @@ class GameState:
 
 
     def _evaluate_hand(self, hand, board):
+        assert len(board) == 5
         return self.evaluator.evaluate([Card.new(a) for a in hand],[Card.new(a) for a in board])
 
 
