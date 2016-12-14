@@ -1,30 +1,29 @@
-from numpy import random as np_rand
 from deuces import Card
 import math
 import logging
+from itertools import accumulate
+import random
 
 logger = logging.getLogger('pokerbot.decision_maker')
 
+
 class MCTSDecisionMaker:
 
-    def __init__(self, opponent_modeller, db, card_provider, pseudo_random = False):
+    def __init__(self, opponent_modeller, db, card_provider):
         self.opponent_modeller = opponent_modeller
         self.db = db
         self.card_provider = card_provider
-        if pseudo_random:
-            np_rand.seed(420)
 
 
     def get_action(self, game_state, max_iter=2000):
-        assert game_state.auto_stage == False
+        assert game_state.auto_deal == False
         logger.info('MCTS iteration count: {}'.format(max_iter))
 
         names = (s.name for s in game_state.table.seats if s.active)
         self.vpips = self._get_player_vpips(names)
 
         our_seat = game_state.table.current_index
-        self.root = BotNode(game_state, our_seat)
-        self._assign_card_provider(self.root)
+        self.root = self._create_root(game_state, our_seat)
 
         for i in range(max_iter):
             if not (i + 1) % 500:
@@ -44,15 +43,13 @@ class MCTSDecisionMaker:
 
     def _get_new_node(self, root):
         node, is_new = root.get_child()
-
         while not is_new and not node.has_reward():
-            node, is_new = node.get_child(self.opponent_modeller.get_probabilities(node.state))
-
+            node, is_new = node.get_child(self._get_probabilities(node))
         return node
 
 
     def _simulate(self, node):
-        simulation_node = PlayerNode(node.state, node.our_seat) #card nodes would behave
+        simulation_node = PlayerNode(node.state.copy(), node.our_seat) #card nodes would behave
         simulation_node.state.auto_stage = True                 #differently
         simulation_node.state.auto_deal = True
         simulation_node.state.card_provider.shuffle()
@@ -62,11 +59,11 @@ class MCTSDecisionMaker:
 
         while not simulation_node.has_reward():
             if simulation_node.our_turn():
-                choice = np_rand.choice(simulation_node.actions) #TODO: apply an OM instead
-                simulation_node.perform(choice)
+                choice = random.choice(simulation_node.actions) #TODO: apply an OM instead
+                perform(simulation_node.state, choice)
             else:
                 prediction = self._get_prediction(simulation_node)
-                simulation_node.perform(prediction)
+                perform(simulation_node.state, prediction)
 
         self._fill_player_cards(simulation_node)
 
@@ -90,16 +87,16 @@ class MCTSDecisionMaker:
 
     def _get_probabilities(self, node):
         probabilities = self.opponent_modeller.get_probabilities(node.state)
-        if len(node.actions) == 2: #when raise is not available
-            probabilities[2] = 0
         return probabilities
 
 
     def _assign_card_provider(self, node):
         self.card_provider.reset()
         self.card_provider.shuffle()
+
         our_cards = node.state.table[node.our_seat].hand
         board_cards = node.state.table.board
+
         self.card_provider.remove_cards(our_cards + board_cards)
         node.state.card_provider = self.card_provider.copy()
 
@@ -115,41 +112,38 @@ class MCTSDecisionMaker:
     def _get_player_vpips(self, player_names):
         return {p : self.db.get_player_stat(p, 'vpip') for p in player_names}
 
+
+    def _create_root(self, game_state, our_seat):
+        root = BotNode(game_state.copy(), our_seat)
+        root.state.auto_stage = False
+        root.visits = 1
+        self._assign_card_provider(root)
+        return root
+
+
 class TreeNode:
 
     def __init__(self, game_state, our_seat):
         self.parent = None
-        self.visits = 1
+        self.visits = 0
         self.reward = 0
 
-        self.state = game_state.copy()
+        self.state = game_state
         self.our_seat = our_seat
 
 
-    def perform(self, action_int):
-        if action_int == 1:
-            self.state.bet()
-        elif action_int == 0:
-            self.state.call()
-        elif action_int == -1:
-            self.state.fold()
-        else:
-            raise RuntimeError('Invalid action to perform!')
-
-
     def get_reward(self):
-        if not self.has_reward():
-            raise RuntimeError('Cannot get reward yet!')
+        assert self.has_reward(), 'Cannot get reward yet!'
         return get_reward(self.state, self.our_seat)
 
 
     def _node_UCT(self, node):
         if node is None:
-            return 1.41 * math.sqrt(math.log(self.visits))
+            return 5 * math.sqrt(math.log(self.visits))
         else:
             n = node.visits
             r = node.reward
-            return r / n + 1.41 * math.sqrt(math.log(self.visits) / n)
+            return r / n + 5 * math.sqrt(math.log(self.visits) / n)
 
 
     def our_turn(self):
@@ -175,16 +169,6 @@ class TreeNode:
             return self._player_actions_noraise
 
 
-def _create_new_node(node):
-    '''Create a new node using the state found in node.'''
-
-    if node.stage_over():
-        return CardNode(node.state, node.our_seat)
-    elif node.our_turn():
-        return BotNode(node.state, node.our_seat)
-    else:
-        return OpponentNode(node.state, node.our_seat)
-
 
 def _child_value(node):
     if node is not None:
@@ -201,15 +185,16 @@ class PlayerNode(TreeNode):
 
 
     def _create_child(self, index):
-        new_node = _create_new_node(self)
+        new_state = self.state.copy()
+        perform(new_state, self._index_to_action(index))
+        new_node = _create_new_node(new_state, self.our_seat)
         new_node.parent = self
         self.children[index] = new_node
-        new_node.perform(self._index_to_action(index))
         return new_node
 
 
-    def get_best_action(self, key = _child_value):
-        best_child = max(self.children, key=key)
+    def get_best_action(self):
+        best_child = max(self.children, key=_child_value)
         index = self.children.index(best_child)
         return self._index_to_action(index)
 
@@ -222,18 +207,30 @@ class BotNode(PlayerNode):
 
     def get_child(self, probabilities = None):
         assert not self.state.stage_over()
-        best_child = max(self.children, key = self._node_UCT)
+
+        best_child = None
+        if self.state.possible_to_raise():
+            best_child = max(self.children, key = self._node_UCT)
+        else:
+            best_child = max(self.children[0:2], key = self._node_UCT)
+
         if best_child is not None:
             return (best_child, False)
         else:
             return (self._create_child(self.children.index(None)), True)
+            #TODO: it will always choose the same index first
 
 
 class OpponentNode(PlayerNode):
 
     def get_child(self, probabilities):
         assert not self.state.stage_over()
-        index = np_rand.choice(range(0,3), p=probabilities)
+
+        index = 0
+        if self.state.possible_to_raise():
+            index = pick_index(probabilities)
+        else:
+            index = pick_index(probabilities[0:2])
 
         if self.children[index] is not None:
             return (self.children[index], False)
@@ -259,24 +256,40 @@ class CardNode(TreeNode):
             index = get_cards_id(card_provider.peek_cards(1))
 
         if self.children.get(index) is None:
-            new_node = _create_new_node(self)
+            new_state = self.state.copy()
+            new_state.card_provider = card_provider
+            new_state.next_stage()
+            new_state.deal_board()
+            new_node = _create_new_node(new_state, self.our_seat)
             new_node.parent = self
-            new_node.state.card_provider = card_provider
-            new_node.state.next_stage()
-            new_node.state.deal_board()
             self.children[index] = new_node
             return (new_node, True)
         else:
             return (self.children[index], False)
 
 
-    def perform(self, action_int):
-        raise RuntimeError("CardNode state shouldn't be altered!")
+def _create_new_node(game_state, our_seat):
+    '''Create a new node using the state found in node.'''
+
+    if game_state.stage_over():
+        return CardNode(game_state, our_seat)
+
+    elif game_state.table.current_index == our_seat:
+        return BotNode(game_state, our_seat)
+
+    else:
+        return OpponentNode(game_state, our_seat)
 
 
-    @property
-    def actions(self):
-        raise RuntimeError("CardNode shouldn't return actions!")
+def perform(game_state, action_int):
+    if action_int == 1:
+        game_state.bet()
+    elif action_int == 0:
+        game_state.call()
+    elif action_int == -1:
+        game_state.fold()
+    else:
+        raise RuntimeError('Invalid action to perform!')
 
 
 def get_reward(game_state, seat):
@@ -296,3 +309,16 @@ def get_reward(game_state, seat):
 def get_cards_id(cards):
     """Return a number which identifies the list of cards passed as argument."""
     return Card.prime_product_from_hand(Card.new(c) for c in cards)
+
+
+def pick_index(probabilities):
+    limits = list(accumulate(probabilities))
+    choice = random.uniform(0, limits[-1])
+    return next(i for i, l in  enumerate(limits) if choice < l)
+
+
+def _node_balance(node):
+    if node is None:
+        return 1
+    return 1 / node.visits
+

@@ -5,7 +5,7 @@ from pokerbot.decision_maker import BotNode
 from pokerbot.decision_maker import OpponentNode
 from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
-from random import Random
+import random
 from copy import copy
 import logging
 from graphviz import Digraph
@@ -44,8 +44,7 @@ class MockDB:
 
 class MockCardProvider:
 
-    def __init__(self, seed = 420, no_shuffle = False):
-        self.random = Random(seed)
+    def __init__(self, no_shuffle = False):
         self.no_shuffle = no_shuffle
         self.reset()
 
@@ -72,7 +71,7 @@ class MockCardProvider:
 
     def shuffle(self):
         if not self.no_shuffle:
-            self.random.shuffle(self.cards)
+            random.shuffle(self.cards)
 
 
     def reset(self):
@@ -95,16 +94,13 @@ class MockCardProvider:
 
 class MockOpponentModeller:
 
-    def __init__(self):
-        self.random = Random(420)
-
     def get_prediction(self, game_state):
         name = game_state.table.current_seat.name
 
         if name == 'Blaine':
-            return self.random.choice([0, 1])
+            return random.choice([0, 1])
         elif name == 'Carly':
-            return self.random.choice([-1, 0, 1])
+            return random.choice([-1, 0, 1])
         else:
             raise RuntimeError()
 
@@ -123,57 +119,68 @@ class TestDecisionMaker:
 
     def setup_method(self):
         self.decision_maker = MCTSDecisionMaker(MockOpponentModeller(),
-                MockDB(), MockCardProvider(), pseudo_random = True)
-        self.game = GameState()
-        self.game.table[0] = Seat('Andy', 9999, ['As', 'Ad'])
+                MockDB(), MockCardProvider())
+        self.game = GameState(auto_stage = True)
+        self.game.table[0] = Seat('Andy', 9999, ['Qc', 'Js'])
         self.game.table[1] = Seat('Blaine', 9999)
         self.game.table[2] = Seat('Carly', 9999)
         self.game.new_game(0)
+        random.seed(420)
 
 
-    def test_card_node(self):
-        self.game.card_provider = MockCardProvider(no_shuffle = True)
+    def test_get_action_preflop(self):
+        assert self.game.table.current_seat.name == 'Andy'
+        self.decision_maker.get_action(self.game, max_iter = 200)
+
+
+    def test_get_action_flop(self):
         self.game.call()
         self.game.call()
         self.game.call()
-        card_node = CardNode(self.game, 0)
-        child_node, is_new  = card_node.get_child()
 
-        assert is_new
-        assert child_node.state.table.board == ['Ah', 'Kh', 'Qh']
+        self.game.board = ['4s', 'Tc', '9c']
 
-        _, is_new  = card_node.get_child()
-        assert child_node == card_node.get_child()[0]
-        assert not is_new
-        #it should return the same node
+        self.game.call()
+        self.game.call()
+        assert self.game.table.current_seat.name == 'Andy'
+        self.decision_maker.get_action(self.game, max_iter = 200)
 
 
-    def test_bot_node(self):
-        self.game.card_provider = MockCardProvider(no_shuffle = True)
-        bot_node = BotNode(self.game, 0)
-        child_node, is_new  = bot_node.get_child()
+    def test_get_action_turn(self):
+        self.game.call()
+        self.game.call()
+        self.game.call()
 
-        assert is_new
-        bot_node.children.index(child_node)
+        self.game.call()
+        self.game.call()
+        self.game.call()
 
-        _, is_new  = bot_node.get_child()
-        assert child_node == bot_node.get_child()[0]
-        assert not is_new
+        self.game.board = ['4s', 'Tc', '9c', 'Qs']
 
-
-    def test_opponent_node(self):
-        self.game.card_provider = MockCardProvider(no_shuffle = True)
-        player_node = OpponentNode(self.game, 0)
-        child_node, is_new  = player_node.get_child([0.3,0.3,0.4])
-
-        assert is_new
-        player_node.children.index(child_node)
-
-        _, is_new  = player_node.get_child([0.3,0.3,0.4])
-        assert not is_new
+        self.game.call()
+        self.game.call()
+        assert self.game.table.current_seat.name == 'Andy'
+        self.decision_maker.get_action(self.game, max_iter = 200)
 
 
-    def test_get_action(self):
+    def test_get_action_river(self):
+        self.game.call()
+        self.game.call()
+        self.game.call()
+
+        self.game.call()
+        self.game.call()
+        self.game.call()
+
+        self.game.call()
+        self.game.call()
+        self.game.call()
+
+        self.game.board = ['4s', 'Tc', '9c', 'Qs', '5s']
+
+        self.game.call()
+        self.game.call()
+        assert self.game.table.current_seat.name == 'Andy'
         self.decision_maker.get_action(self.game, max_iter = 200)
 
 
@@ -189,6 +196,8 @@ def make_node(node, graph, action):
 def get_graph(root, graph):
     nodes = deque()
     nodes.append(root)
+
+    make_node(root, graph, 'x')
 
     while nodes:
         node = nodes.popleft()
