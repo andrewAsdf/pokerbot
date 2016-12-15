@@ -225,6 +225,7 @@ class OpponentNode(PlayerNode):
 
     def get_child(self, probabilities):
         assert not self.state.stage_over()
+        assert len(probabilities) == 3
 
         index = 0
         if self.state.possible_to_raise():

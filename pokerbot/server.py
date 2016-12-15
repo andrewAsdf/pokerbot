@@ -1,11 +1,11 @@
-
 from pokerbot.controller import Controller
 from pokerbot.database import Database
 from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
 from pokerbot.opponent_modeller import OpponentModeller
-from pokerbot.stat_creator import StatCreator
-from pokerbot.decision_maker import DecisionMaker()
+from pokerbot.decision_maker import MCTSDecisionMaker
+from pokerbot.card_provider import CardProvider
+import pokerbot.stats
 import pokerbot.features
 import pokerbot.learning as learning
 
@@ -39,9 +39,10 @@ db = Database()
 
 features = pokerbot.features.functions
 
-opponent_modeller = OpponentModeller(features, db, 100, learning)
+opponent_modeller = OpponentModeller(features, db, 100, learning, pokerbot.stats)
+decision_maker = MCTSDecisionMaker(opponent_modeller, db, CardProvider())
 
-controller = Controller(GameState(), db, opponent_modeller, DecisionMaker())
+controller = Controller(GameState(), db, opponent_modeller, decision_maker)
 
 
 action_string_template = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -92,19 +93,32 @@ def hole_cards():
     cards = xml.holecards.cards.card #an array of 2 cards
 
     controller.bot_seat(int(xml.holecards.seat.cdata))
-    controller.bot_cards((cards[0].cdata, cards[1].cdata))
+    controller.bot_cards([cards[0].cdata, cards[1].cdata])
 
     return Response()
+
+
+def action_to_string(action_int):
+    if action_int == -1:
+        return 'fold'
+    elif action_int == 0:
+        return 'call'
+    elif action_int == 1:
+        return 'raise'
+    else:
+        raise RuntimeError('Invalid action integer!')
 
 
 @app.route('/action', methods=['GET', 'POST'])
 def action():
 
     if request.method == 'GET':
-        action_string = controller.get_action()
-        logger.info("Bot action is: {}".format(action_string))
+        action_int = controller.get_action()
+        action = action_to_string(action_int)
 
-        xml = get_action_xml (action_string, 10)
+        logger.info("Bot action is: {}".format(action))
+
+        xml = get_action_xml (action, 10)
         return Response(xml, mimetype='text/xml');
     else:
         xml = get_object_from_xml(request.data)

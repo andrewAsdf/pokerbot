@@ -10,6 +10,7 @@ from copy import copy
 import logging
 from graphviz import Digraph
 from collections import deque
+import time
 
 def get_logger():
     logger = logging.getLogger('pokerbot')
@@ -217,11 +218,21 @@ def get_graph(root, graph):
 
 
 if __name__ == '__main__':
-    test = TestDecisionMaker()
-    test.setup_method()
-    test.test_get_action_river()
 
-    graph = Digraph()
-    graphviz_graph = get_graph(test.decision_maker.root, graph)
-    graph.view()
+    decision_maker = MCTSDecisionMaker(MockOpponentModeller(),
+            MockDB(), MockCardProvider())
 
+    game = GameState(auto_stage = True)
+    game.table[0] = Seat('Andy', 9999, ['Qc', 'Js'])
+    game.table[1] = Seat('Blaine', 9999)
+    game.table[2] = Seat('Carly', 9999)
+    game.new_game(0)
+    random.seed(420)
+
+    assert game.table.current_seat.name == 'Andy'
+    start_time = time.time()
+    decision_maker.get_action(game, max_iter = 2000)
+    print('MCTS running time: {} sec'.format(time.time() - start_time))
+
+    #graph = Digraph()
+    #graphviz_graph = get_graph(decision_maker.root, graph)

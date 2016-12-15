@@ -71,7 +71,7 @@ class Database:
 
     def get_player_stat(self, player_name, stat_name):
         found = self.players.find_one({'name' : player_name}, {stat_name : 1})
-        if found.get(stat_name) is not None:
+        if found is not None:
             return found[stat_name]
         else:
             return None

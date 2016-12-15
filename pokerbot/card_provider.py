@@ -1,6 +1,7 @@
 from random import Random
+from copy import copy
 
-class ckCardProvider:
+class CardProvider:
 
     def __init__(self, seed = 420, no_shuffle = False):
         self.random = Random(seed)

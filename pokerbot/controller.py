@@ -26,10 +26,14 @@ class Controller:
 
 
     def get_action(self):
-        return decision_maker.get_action(game)
+        if not self.playing:
+            return 0
+        return self.decision_maker.get_action(self.game)
 
 
     def handle_event(self, event):
+        if not self.playing:
+            return
         type = event['type']
 
         if type == 'board':
@@ -60,11 +64,15 @@ class Controller:
 
 
     def bot_cards(self, cards):
+        if not self.playing:
+            return
         self.cards = cards
         self.game.table[self.seat].hand = cards
 
 
     def bot_seat(self, seat):
+        if not self.playing:
+            return
         self.seat = seat
 
 

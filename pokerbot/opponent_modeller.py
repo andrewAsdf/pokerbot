@@ -154,10 +154,11 @@ class OpponentModeller:
         feature_vec = [f(game_state) for f in self.features]
         player_name = game_state.table.current_seat.name
 
-        if (self.models.get(player_name) is None):
+        if (self.models.get(player_name) is None): #TODO: when to refresh
             self.models[player_name] = self.db.get_player_model(player_name)
 
         if (self.models.get(player_name) is not None):
-            return self.model_creator.use_model(self.models[player_name], feature_vec)
+            return self.model_creator.use_model(self.models[player_name],\
+                    feature_vec, get_prob=True)
         else:
             return (0.1, 0.6, 0.3)

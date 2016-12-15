@@ -201,8 +201,8 @@ class MockModelCreator:
         return inputs, answers
 
 
-    def use_model(self, model, features):
-        return 1
+    def use_model(self, model, features, get_prob = False):
+        return 1 if not get_prob else (0, 0.5, 0.5)
 
 
 class MockStatCreator:
@@ -275,3 +275,11 @@ class TestOpponentModeller:
 
         assert self.opp_mod.get_prediction(game) == 1
 
+
+    def test_get_probabilities(self):
+        button = test_game['button']
+        table_data = test_game['table']
+        game = self.opp_mod.create_game_state(table_data, button)
+
+        assert len(self.opp_mod.get_probabilities(game)) == 3
+        

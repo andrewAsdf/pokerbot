@@ -7,12 +7,21 @@ class Seat:
 
     def __init__ (self, name = '', chips = 0, hand = []):
         self.chips_bet = 0
-        self.hand = hand
+        self._hand = hand
         self.name = name
         self.chips = chips
         self._folded = False
         self._total_chips_bet = 0 #TODO: hack for counting loss
 
+
+    @property
+    def hand(self):
+        return self._hand
+
+    @hand.setter
+    def hand(self, hand):
+        assert type(hand) == list
+        self._hand = hand
 
     def place_bet(self, amount):
         self.chips -= amount
@@ -272,8 +281,10 @@ class GameState:
 
         self.to_call = self.big_blind
         self._pot_previous_rounds = 0
-        self._postBlinds()
+        self.stage = 0
+        self.bet_count = 0
         self._stage_over = False
+        self._postBlinds()
 
 
     def possible_to_raise(self):
