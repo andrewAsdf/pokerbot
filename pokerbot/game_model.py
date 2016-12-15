@@ -12,7 +12,16 @@ class Seat:
         self.chips = chips
         self._folded = False
         self._total_chips_bet = 0 #TODO: hack for counting loss
+        self._last_action = 0 #for the feature
 
+    def assign(self, seat):
+        self.chips_bet        = seat.chips_bet
+        self._hand            = seat._hand #this is an array though, but won't change
+        self.name             = seat.name
+        self.chips            = seat.chips
+        self._folded          = seat._folded
+        self._total_chips_bet = seat._total_chips_bet
+        self._last_action     = seat._last_action
 
     @property
     def hand(self):
@@ -61,7 +70,7 @@ class Seat:
 class Table:
 
     def __init__ (self):
-        self.seats = [Seat()] * 10 #table size
+        self.seats = [Seat() for _ in range(10)]
         self.current_index = 0
         self.button_index = 0
         self.stop_index = 0
@@ -84,6 +93,16 @@ class Table:
         new_table.board = copy(self.board)
         new_table.seats = [copy(s) for s in self.seats]
         return new_table
+
+
+    def assign(self, table):
+        for i in range(10):
+            self.seats[i].assign(table[i])
+
+        self._board        = table._board.copy()
+        self.current_index = table.current_index
+        self.button_index  = table.button_index
+        self.stop_index    = table.stop_index
 
 
     def __getitem__(self, index):
@@ -194,6 +213,24 @@ class GameState:
         return new_state
 
 
+    def assign(self, game_state):
+        self.table.assign(game_state.table)
+
+        if game_state.card_provider is not None:
+            self.card_provider = game_state.card_provider.copy()
+
+        self.stage                = game_state.stage
+        self._pot_previous_rounds = game_state._pot_previous_rounds
+        self.to_call              = game_state.to_call
+        self.big_blind            = game_state.big_blind
+        self.bet_count            = game_state.bet_count
+        self.auto_stage           = game_state.auto_stage
+        self.auto_deal            = game_state.auto_deal
+        self._stage_over          = game_state._stage_over
+
+        return self
+
+
     @property
     def current_bet_size(self): #preflop & flop: 1xBB, turn & river: 2xBB
         return self.big_blind if self.stage < 2 else self.big_blind * 2
@@ -247,6 +284,7 @@ class GameState:
 
         if player.chips_bet < self.to_call:
             self._call(player)
+        player._last_action = 0 #for the feature calculation
 
         self.table.next_seat()
 
@@ -267,6 +305,8 @@ class GameState:
             self._call(player)
 
         self._bet(player, self.current_bet_size)
+
+        player._last_action = 1 #for the feature calculation
 
         self.table.stop_index = self.table.current_index
         self.table.next_seat()

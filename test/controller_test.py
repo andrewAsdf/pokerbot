@@ -168,44 +168,72 @@ class MockOpponentModeller:
 
 class MockDecisionMaker:
 
-    def get_action(game_state):
+    def get_action(self, game_state):
         return 'call'
-
-
-def create_game_state(table_data, button_seat):
-    game_state = GameState()
-
-    for seat_data in table_data:
-        seat_number = seat_data['seat_number']
-
-        new_seat = Seat(seat_data['name'], seat_data['stack'])
-        new_seat.hand = seat_data['hand']
-
-        game_state.table[seat_number] = new_seat
-
-    game_state.new_game(button_seat)
-    return game_state
 
 
 class TestController:
 
     def setup_method(self):
-        self.game = create_game_state(test_game['table'], test_game['button'])
         objects = [MockDB(), MockOpponentModeller(), MockDecisionMaker()]
+        self.game = GameState()
         self.controller = Controller(self.game, *objects)
 
+        players = [Seat() for _ in range(10)]
+        for p in test_game['table']:
+            seat = p['seat_number']
+            players[seat] = Seat(p['name'], float(p['stack']))
+
+        self.controller.new_game(players, test_game['button'])
+
     def test_replay(self):
-        [self.controller.handle_event(a) for a in test_game['actions']]
 
-        assert self.game.table[1].chips == 99 #fold
-        assert self.game.table[2].chips == 100 #fold
-        assert self.game.table[3].chips == 95
-        assert self.game.table[4].chips == 99 #fold
-        assert self.game.table[5].chips == 95
-
-        assert not self.game.table[1].active
+        self.controller.handle_event(test_game['actions'][0]) #sb
+        assert self.game.table[3].chips == 99.5
+        self.controller.handle_event(test_game['actions'][1]) #bb
+        assert self.game.table[4].chips == 99
+        self.controller.handle_event(test_game['actions'][2]) #call 5
+        assert self.game.table[5].chips == 99
+        self.controller.handle_event(test_game['actions'][3]) #call 1
+        assert self.game.table[1].chips == 99
+        self.controller.handle_event(test_game['actions'][4]) #fold 2
+        assert self.game.table[2].chips == 100
         assert not self.game.table[2].active
-        assert self.game.table[3].active
+        self.controller.handle_event(test_game['actions'][5]) #call 3
+        assert self.game.table[3].chips == 99
+        self.controller.handle_event(test_game['actions'][6]) #check 4
+        assert self.game.table[4].chips == 99
+        self.controller.handle_event(test_game['actions'][7]) #flop
+        assert self.game.table.board == ["5s", "7c", "Kh"]
+        self.controller.handle_event(test_game['actions'][8]) #check 3
+        assert self.game.table[3].chips == 99
+        self.controller.handle_event(test_game['actions'][9]) #check 4
+        assert self.game.table[4].chips == 99
+        self.controller.handle_event(test_game['actions'][10]) #check 5
+        assert self.game.table[5].chips == 99
+        self.controller.handle_event(test_game['actions'][11]) #check 1
+        assert self.game.table[1].chips == 99
+        self.controller.handle_event(test_game['actions'][12]) #turn
+        assert self.game.table.board == ["5s", "7c", "Kh", "Ac"]
+        self.controller.handle_event(test_game['actions'][13]) #bet 3
+        assert self.game.table[3].chips == 97
+        self.controller.handle_event(test_game['actions'][14]) #fold 4
+        assert self.game.table[4].chips == 99
         assert not self.game.table[4].active
+        self.controller.handle_event(test_game['actions'][15]) #call 5
+        assert self.game.table[5].chips == 97
+        self.controller.handle_event(test_game['actions'][16]) #fold 1
+        assert self.game.table[1].chips == 99
+        assert not self.game.table[1].active
+        self.controller.handle_event(test_game['actions'][17]) #river
+        assert self.game.table.board == ["5s", "7c", "Kh", "Ac", "3s"]
+        self.controller.handle_event(test_game['actions'][18]) #bet 3
+        assert self.game.table[3].chips == 95
+        assert self.game.table[3].active
+        self.controller.handle_event(test_game['actions'][19]) #call 5
+        assert self.game.table[5].chips == 95
         assert self.game.table[5].active
+        self.controller.handle_event(test_game['actions'][20]) #gameover
+
+
 

@@ -234,5 +234,5 @@ if __name__ == '__main__':
     decision_maker.get_action(game, max_iter = 2000)
     print('MCTS running time: {} sec'.format(time.time() - start_time))
 
-    #graph = Digraph()
-    #graphviz_graph = get_graph(decision_maker.root, graph)
+    graph = Digraph()
+    graphviz_graph = get_graph(decision_maker.root, graph)

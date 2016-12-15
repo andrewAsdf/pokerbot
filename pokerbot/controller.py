@@ -28,7 +28,7 @@ class Controller:
     def get_action(self):
         if not self.playing:
             return 0
-        return self.decision_maker.get_action(self.game)
+        return self.decision_maker.get_action(self.game, max_iter=1000)
 
 
     def handle_event(self, event):

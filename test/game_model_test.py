@@ -21,6 +21,9 @@ class MockCardProvider:
     def get_river(self):
         return 'Qs'
 
+    def copy(self):
+        return MockCardProvider()
+
 
 class TestSeat():
 
@@ -419,3 +422,36 @@ class TestGameState:
         self.game.call()
 
         assert self.game.get_winners() == [self.game.table[8]]
+
+
+class TestAssignments:
+
+    def setup_method(self):
+        self.game = GameState(auto_stage = True)
+        self.game.table[1] = Seat('Andy', 100, ['As', 'Ad'])
+        self.game.table[5] = Seat('Blaine', 100)
+        self.game.table[8] = Seat('Carly', 100)
+        self.game.card_provider = MockCardProvider()
+        self.game.new_game()
+
+
+    def test_seat_assignment(self):
+        seat = Seat()
+        seat.assign(self.game.table[1])
+        assert seat.name == 'Andy'
+        assert seat.chips == 100
+        assert seat.hand == ['As', 'Ad']
+
+
+    def test_table_assignment(self):
+        table = Table()
+        table.assign(self.game.table)
+        assert table[1].name == 'Andy'
+        assert table.active_player_count == 3
+
+
+    def test_state_assignment(self):
+        game = GameState()
+        game.assign(self.game)
+        assert game.table[1].name == 'Andy'
+        assert game.table.active_player_count == 3

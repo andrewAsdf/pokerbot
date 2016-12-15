@@ -1,4 +1,5 @@
 from deuces import Card
+from pokerbot.game_model import GameState
 import math
 import logging
 from itertools import accumulate
@@ -48,9 +49,11 @@ class MCTSDecisionMaker:
         return node
 
 
+    _simulation_node = GameState() #we can use one node because we are not multithreaded
+
     def _simulate(self, node):
-        simulation_node = PlayerNode(node.state.copy(), node.our_seat) #card nodes would behave
-        simulation_node.state.auto_stage = True                 #differently
+        simulation_node = PlayerNode(self._simulation_node.assign(node.state), node.our_seat)
+        simulation_node.state.auto_stage = True
         simulation_node.state.auto_deal = True
         simulation_node.state.card_provider.shuffle()
 
@@ -103,7 +106,7 @@ class MCTSDecisionMaker:
 
 
     def _create_root(self, game_state, our_seat):
-        root = BotNode(game_state.copy(), our_seat)
+        root = BotNode(GameState().assign(game_state), our_seat)
         root.state.auto_stage = False
         root.visits = 1
         self._assign_card_provider(root)
@@ -185,7 +188,7 @@ class PlayerNode(TreeNode):
 
 
     def _create_child(self, index):
-        new_state = self.state.copy()
+        new_state = GameState().assign(self.state)
         perform(new_state, self._index_to_action(index))
         new_node = _create_new_node(new_state, self.our_seat)
         new_node.parent = self
@@ -257,7 +260,7 @@ class CardNode(TreeNode):
             index = get_cards_id(card_provider.peek_cards(1))
 
         if self.children.get(index) is None:
-            new_state = self.state.copy()
+            new_state = GameState().assign(self.state)
             new_state.card_provider = card_provider
             new_state.next_stage()
             new_state.deal_board()

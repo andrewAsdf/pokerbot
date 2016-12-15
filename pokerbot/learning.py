@@ -1,10 +1,11 @@
 from sklearn.neural_network import MLPClassifier
+from numpy import array
 
 
 def make_model(inputs, answers, prev_model = None):
     if prev_model is None:
         model = MLPClassifier(hidden_layer_sizes = [25, 15])
-        model.fit(inputs, answers)
+        model.fit(array(inputs), array(answers))
         return model
     else:
         prev_model.partial_fit(inputs, answers)

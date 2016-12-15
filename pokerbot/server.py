@@ -139,7 +139,7 @@ def newgame():
 
     xml = get_object_from_xml(request.data)
 
-    players = [Seat()] * 10
+    players = [Seat() for _ in range(10)]
 
     for p in xml.newgame.players.player:
         seat = int(p.seat.cdata)
@@ -189,4 +189,4 @@ def gameover():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
