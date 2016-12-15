@@ -1,17 +1,32 @@
 from pokerbot.game_model import GameState
 from pokerbot.game_model import Seat
-from pokerbot.controller import Controller
 
 import logging
 
-class _ReplayController(Controller):
-    '''Controller class for replaying games'''
+class _ReplayController:
 
     def __init__(self, game):
-        super().__init__(game, None, None, None)
+        self.game = game
 
-    def game_over(self):
-        pass
+    def handle_event(self, event):
+        type = event['type']
+
+        if type == 'board':
+            self.game.table.board = event['cards']
+            self.game.next_stage()
+        elif type == 'bet' or type == 'raise':
+            self.game.bet()
+        elif type == 'call' or type == 'check':
+            self.game.call()
+        elif type == 'fold':
+            self.game.fold()
+        elif type == 'gameover':
+            pass
+        elif type == 'bigBlind' or type == 'smallBlind':
+            pass
+        else:
+            raise RuntimeError('Invalid event type: {}'.format(type))
+
 
 logger = logging.getLogger('pokerbot.opponent_modeller')
 

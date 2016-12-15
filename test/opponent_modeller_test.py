@@ -282,4 +282,4 @@ class TestOpponentModeller:
         game = self.opp_mod.create_game_state(table_data, button)
 
         assert len(self.opp_mod.get_probabilities(game)) == 3
-        
+
