@@ -66,7 +66,7 @@ class MockCardProvider:
         return self.cards.pop()
 
 
-    def peek_cards(self, number):
+    def peek_board(self, number):
         return self.cards[-number:]
 
 

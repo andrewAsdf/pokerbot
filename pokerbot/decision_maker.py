@@ -255,9 +255,9 @@ class CardNode(TreeNode):
 
         index = None
         if self.state.stage == 0:
-            index = get_cards_id(card_provider.peek_cards(3))
+            index = get_cards_id(card_provider.peek_board(3))
         else:
-            index = get_cards_id(card_provider.peek_cards(1))
+            index = get_cards_id(card_provider.peek_board(1))
 
         if self.children.get(index) is None:
             new_state = GameState().assign(self.state)

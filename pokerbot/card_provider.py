@@ -1,45 +1,60 @@
-from random import Random
+import random
 from copy import copy
 
 class CardProvider:
+    _cards_list = [ '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', 'Td',
+                'Jd', 'Qd', 'Kd', 'Ad', '2c', '3c', '4c', '5c', '6c', '7c', '8c',
+                '9c', 'Tc', 'Jc', 'Qc', 'Kc', 'Ac', '2s', '3s', '4s', '5s', '6s',
+                '7s', '8s', '9s', 'Ts', 'Js', 'Qs', 'Ks', 'As', '2h', '3h', '4h',
+                '5h', '6h', '7h', '8h', '9h', 'Th', 'Jh', 'Qh', 'Kh', 'Ah' ]
 
-    def __init__(self, seed = 420, no_shuffle = False):
-        self.random = Random(seed)
-        self.no_shuffle = no_shuffle
+    def __init__(self):
         self.reset()
 
 
-    def get_hand(self, vpip = 1):
-        return [self.cards.pop(), self.cards.pop()]
-
-
-    def get_flop(self):
-        return [self.cards.pop(), self.cards.pop(), self.cards.pop()]
-
-
-    def get_turn(self):
-        return self.cards.pop()
-
-
-    def get_river(self):
-        return self.cards.pop()
-
-
-    def peek_cards(self, number):
-        return self.cards[-number:]
+    def reset(self):
+        self.cards = set(self._cards_list) 
+        self.board = [self._remove_card() for _ in range(5)]
 
 
     def shuffle(self):
-        if not self.no_shuffle:
-            self.random.shuffle(self.cards)
+        redraw_count = len(self.board)
+        self.cards.update(self.board)  
+        self.board = [self._remove_card() for _ in range(redraw_count)]
 
 
-    def reset(self):
-        self.cards = [ '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', 'Td',
-            'Jd', 'Qd', 'Kd', 'Ad', '2c', '3c', '4c', '5c', '6c', '7c', '8c',
-            '9c', 'Tc', 'Jc', 'Qc', 'Kc', 'Ac', '2s', '3s', '4s', '5s', '6s',
-            '7s', '8s', '9s', 'Ts', 'Js', 'Qs', 'Ks', 'As', '2h', '3h', '4h',
-            '5h', '6h', '7h', '8h', '9h', 'Th', 'Jh', 'Qh', 'Kh', 'Ah' ]
+    def get_hand(self, vpip = 1):
+        """
+        Return a randomly selected hand, optionally falling into given
+        range. While it is possible that this method won't return, it is not
+        probable.
+        """
+        max_strength = vpip * 169 #169 is the weakest hand
+        hand_strength = 170
+        cards = []
+
+        while not hand_strength < max_strength:
+            cards = random.sample(self.cards, 2) 
+            hand_strength = get_hand_strength(*cards)
+
+        self.cards.symmetric_difference_update(cards)
+        return cards
+
+
+    def get_flop(self):
+        return [self.board.pop(), self.board.pop(), self.board.pop()]
+
+
+    def get_turn(self):
+        return self.board.pop()
+
+
+    def get_river(self):
+        return self.board.pop()
+
+
+    def peek_board(self, number):
+        return self.board[-number:]
 
 
     def remove_cards(self, removed_cards):
@@ -49,7 +64,37 @@ class CardProvider:
     def copy(self):
         new_prov = copy(self)
         new_prov.cards = copy(self.cards)
+        new_prov.board = copy(self.board)
         return new_prov
+
+
+    def _remove_card(self):
+        card = random.sample(self.cards, 1)[0]
+        self.cards.remove(card)
+        return card
+
+
+
+def get_hand_strength(card1, card2):
+    """
+    Return the starting hand strength ranging from 1 to 169, where the weakest
+    hand is 169. Arguments must be in the standard string format.
+    """
+    rank1 = card1[0]
+    suit1 = card1[1]
+    rank2 = card2[0]
+    suit2 = card2[1]
+
+    suited = 's' if suit1 == suit2 else 'o'
+
+    if _hand_ranks[rank2] < _hand_ranks[rank1]:
+        return (_hand_values[rank1 + rank2 + suited])
+
+    elif _hand_ranks[rank2] > _hand_ranks[rank1]:
+        return (_hand_values[rank2 + rank1 + suited])
+
+    else:
+        return (_hand_values[rank2 + rank1])
 
 
 _hand_values = {'AA' : 1, 'KK' : 2, 'QQ' : 3, 'AKs' : 4,
@@ -107,28 +152,8 @@ _hand_ranks = {
         '9' : '9',
         'T' : 'A',
         'J' : 'B',
-        'K' : 'C',
-        'A' : 'D',
+        'Q' : 'C',
+        'K' : 'D',
+        'A' : 'E',
         }
 #hand rank ordering is done lexicographically
-
-def get_hand_value(card1, card2):
-    """
-    Return the starting hand value ranging from 1 to 169, where the weakest
-    hand is 169. Arguments must be in the standard string format.
-    """
-    rank1 = card1[0]
-    suit1 = card1[1]
-    rank2 = card2[0]
-    suit2 = card2[1]
-
-    suited = 's' if suit1 == suit2 else 'o'
-
-    if _hand_ranks[rank2] < _hand_ranks[rank1]:
-        return (_hand_values[rank1 + rank2 + suited])
-
-    elif _hand_ranks[rank2] > _hand_ranks[rank1]:
-        return (_hand_values[rank2 + rank1 + suited])
-
-    else:
-        return (_hand_values[rank2 + rank1])
