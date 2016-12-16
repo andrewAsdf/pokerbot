@@ -20,7 +20,7 @@ class TestCardProvider:
     def test_peek_board(self):
         peeked = self.card_provider.peek_board(3)
         assert set(peeked) == set(self.card_provider.get_flop())
-     
+
 
     def test_get_hand(self):
         hand = self.card_provider.get_hand()
@@ -37,6 +37,12 @@ class TestCardProvider:
         strength = pokerbot.card_provider.get_hand_strength(*hand)
         assert strength / 169 < 0.4
         #strength / 169 must be smaller than vpip because 169 is the weakest hand
+
+
+    def test_remove_card(self):
+        self.card_provider.cards = {'Ad', 'Qd', 'Kd'}
+        self.card_provider.remove_cards(['Ad', 'Qd'])
+        assert len(self.card_provider.cards) == 1
 
 
     def test_copy(self):

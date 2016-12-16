@@ -4,7 +4,8 @@ from numpy import array
 
 def make_model(inputs, answers, prev_model = None):
     if prev_model is None:
-        model = MLPClassifier(hidden_layer_sizes = [25, 15])
+        model = MLPClassifier(hidden_layer_sizes = [20, 17], max_iter = 2000,\
+                solver='lbfgs', early_stopping=True)
         model.fit(array(inputs), array(answers))
         return model
     else:

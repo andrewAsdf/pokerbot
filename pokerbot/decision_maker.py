@@ -96,7 +96,7 @@ class MCTSDecisionMaker:
     def _fill_player_cards(self, node):
         seats = node.state.table.seats
         for seat in (s for i, s in enumerate(seats) if s.active and i != node.our_seat):
-            vpip = 1 if self.vpips[seat.name] else self.vpips[seat.name]
+            vpip = 1 if not self.vpips[seat.name] else self.vpips[seat.name]
             hand = node.state.card_provider.get_hand(vpip = vpip)
             seat.hand = hand
 

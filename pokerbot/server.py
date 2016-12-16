@@ -38,8 +38,9 @@ app = Flask(__name__)
 db = Database()
 
 features = pokerbot.features.functions
+stats = pokerbot.stats.functions
 
-opponent_modeller = OpponentModeller(features, db, 100, learning, pokerbot.stats)
+opponent_modeller = OpponentModeller(features, db, 50, learning, stats)
 decision_maker = MCTSDecisionMaker(opponent_modeller, db, CardProvider())
 
 controller = Controller(GameState(), db, opponent_modeller, decision_maker)

@@ -2,25 +2,21 @@ import random
 from copy import copy
 
 class CardProvider:
-    _cards_list = [ '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', 'Td',
-                'Jd', 'Qd', 'Kd', 'Ad', '2c', '3c', '4c', '5c', '6c', '7c', '8c',
-                '9c', 'Tc', 'Jc', 'Qc', 'Kc', 'Ac', '2s', '3s', '4s', '5s', '6s',
-                '7s', '8s', '9s', 'Ts', 'Js', 'Qs', 'Ks', 'As', '2h', '3h', '4h',
-                '5h', '6h', '7h', '8h', '9h', 'Th', 'Jh', 'Qh', 'Kh', 'Ah' ]
 
     def __init__(self):
         self.reset()
 
 
     def reset(self):
-        self.cards = set(self._cards_list) 
-        self.board = [self._remove_card() for _ in range(5)]
+        self.cards = [ '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', 'Td',
+                    'Jd', 'Qd', 'Kd', 'Ad', '2c', '3c', '4c', '5c', '6c', '7c', '8c',
+                    '9c', 'Tc', 'Jc', 'Qc', 'Kc', 'Ac', '2s', '3s', '4s', '5s', '6s',
+                    '7s', '8s', '9s', 'Ts', 'Js', 'Qs', 'Ks', 'As', '2h', '3h', '4h',
+                    '5h', '6h', '7h', '8h', '9h', 'Th', 'Jh', 'Qh', 'Kh', 'Ah' ]
 
 
     def shuffle(self):
-        redraw_count = len(self.board)
-        self.cards.update(self.board)  
-        self.board = [self._remove_card() for _ in range(redraw_count)]
+        random.shuffle(self.cards)
 
 
     def get_hand(self, vpip = 1):
@@ -34,44 +30,39 @@ class CardProvider:
         cards = []
 
         while not hand_strength < max_strength:
-            cards = random.sample(self.cards, 2) 
+            cards = random.sample(self.cards, 2)
             hand_strength = get_hand_strength(*cards)
 
-        self.cards.symmetric_difference_update(cards)
+        self.cards.remove(cards[0])
+        self.cards.remove(cards[1])
         return cards
 
 
     def get_flop(self):
-        return [self.board.pop(), self.board.pop(), self.board.pop()]
+        return [self.cards.pop(), self.cards.pop(), self.cards.pop()]
 
 
     def get_turn(self):
-        return self.board.pop()
+        return self.cards.pop()
 
 
     def get_river(self):
-        return self.board.pop()
+        return self.cards.pop()
 
 
     def peek_board(self, number):
-        return self.board[-number:]
+        return self.cards[-number:]
 
 
     def remove_cards(self, removed_cards):
-        [self.cards.remove(c) for c in removed_cards]
+        for c in removed_cards:
+            self.cards.remove(c)
 
 
     def copy(self):
         new_prov = copy(self)
         new_prov.cards = copy(self.cards)
-        new_prov.board = copy(self.board)
         return new_prov
-
-
-    def _remove_card(self):
-        card = random.sample(self.cards, 1)[0]
-        self.cards.remove(card)
-        return card
 
 
 
